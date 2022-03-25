@@ -1,0 +1,21 @@
+{
+  "name": "gecon-system-test",
+  "version": "1.0.0",
+  "description": "System test for \"Gecon\" generator controller",
+  "main": "src/main.js",
+  "author": "Mike Mihaylov",
+  "license": "MIT",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node --experimental-modules src/main.js"
+  },
+  "dependencies": {
+    "serialport": "^9.0.7"
+  },
+  "bin": {
+    "create-project": "src/main.js"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.15"
+  }
+}

@@ -1,0 +1,17 @@
+#******************* Tempory ********************
+*.pyc
+#******************** Output ********************
+release-builds
+#******************* Archives *******************
+*.rar
+*.tar
+*.7z
+*.zip
+*.arj
+*.cab
+*.lzh
+#**************** Node and yarn *****************
+/node_modules
+yarn-error.log
+yarn.lock
+dist
