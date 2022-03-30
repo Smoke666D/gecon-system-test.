@@ -324,9 +324,71 @@ function systemTest () {
         });
       });
     }
-    
+    async function run ( test, onError  ) {
+      try {
+        return await test();
+      } catch( data ) {
+        return onError();
+      }
+    }
 
     list = [];
+
+    run( testStorage(),             reject() );
+    run( testButtonUp( 0 ),         reject() );
+    run( testButtonUp( 1 ),         reject() );
+    run( testButtonUp( 2 ),         reject() );
+    run( testButtonUp( 3 ),         reject() );
+    run( testButtonUp( 4 ),         reject() );
+    run( testBattery(),             reject() );
+    run( testOil(),                 reject() );
+    run( testCoolant(),             reject() );
+    run( testFuel(),                reject() );
+    run( testCharger(),             reject() );
+    run( testDin( 0 ),              reject() );
+    run( testDin( 1 ),              reject() );
+    run( testDin( 2 ),              reject() );
+    run( testDin( 3 ),              reject() );
+    run( testDout( 0 ),             reject() );
+    run( testDout( 1 ),             reject() );
+    run( testDout( 2 ),             reject() );
+    run( testDout( 3 ),             reject() );
+    run( testDout( 4 ),             reject() );
+    run( testDout( 5 ),             reject() );
+    run( testGeneratorVoltage( 0 ), reject() );
+    run( testGeneratorVoltage( 1 ), reject() );
+    run( testGeneratorVoltage( 2 ), reject() );
+    run( testMainsVoltage( 0 ),     reject() );
+    run( testMainsVoltage( 1 ),     reject() );
+    run( testMainsVoltage( 2 ),     reject() );
+    run( testCurrent( 0 ),          reject() );
+    run( testCurrent( 1 ),          reject() );
+    run( testCurrent( 2 ),          reject() );
+    run( testFrequency( 0 ),        reject() );
+    run( testFrequency( 1 ),        reject() );
+    run( testSpeed(),               reject() );
+    run( testLED( 0 ),              reject() );
+    run( testLED( 1 ),              reject() );
+    run( testLED( 2 ),              reject() );
+    run( testButtonDown( 0 ),       reject() );
+    run( testButtonDown( 1 ),       reject() );
+    run( testButtonDown( 2 ),       reject() );
+    run( testButtonDown( 3 ),       reject() );
+    run( testButtonDown( 4 ),       reject() );
+    run( testEthernet(),            reject() );
+    testSecces = 0;
+    list.forEach( function ( record ) {
+      testSecces += record.res;
+    });
+    if ( testSecces == testLength ) {
+      log.write( 'message', 'System test finished seccesful=)')
+      resolve();
+    } else {
+      log.write( 'warning', ( 'System test finished with errors. There are ' + ( testLength - testSecces ) + ' unseccesful tests' ) );
+      reject();
+    }
+
+/*
     testStorage().then( function ( res ) {
       testButtonUp( 0 ).then( function ( res ) {
         testButtonUp( 1 ).then( function ( res ) {
@@ -358,7 +420,7 @@ function systemTest () {
                                                             testCurrent( 1 ).then( function ( res ) {
                                                               testCurrent( 2 ).then( function ( res ) {
                                                                 testFrequency( 0 ).then( function ( res ) {
-                                                                  testFrequency( 0 ).then( function ( res ) {
+                                                                  testFrequency( 1 ).then( function ( res ) {
                                                                     testSpeed().then( function ( res ) {
                                                                       testLED( 0 ).then( function ( res ) {
                                                                         testLED( 1 ).then( function ( res ) {
@@ -422,7 +484,9 @@ function systemTest () {
         }).catch( function () { reject(); });
       }).catch( function () { reject(); });
     }).catch( function () { reject(); });
+    */
   }); 
 }
+
 
 module.exports.systemTest = systemTest;

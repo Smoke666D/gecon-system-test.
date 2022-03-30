@@ -34,7 +34,7 @@ function Report () {
     output += '[TEST]     ' + name + ': ' + string + '\n';
   }
   function add ( list ) {
-    return new Promise( function ( resolve, reject ) {
+    return new Promise( function ( resolve ) {
       list.forEach( function ( record ) {
         if ( ( record.res == 0) || ( ( record.res > 0 ) && ( writeSucces > 0 ) ) ) {
           addTest( record.name, record.res );
@@ -45,15 +45,16 @@ function Report () {
     return;
   }
   this.write = function ( list ) {
-    let path = reportFolder + id + extension;
-    add( list ).then( function () {
-      fs.appendFile( path, output, 'utf-8', function ( error ) {
-        if ( error ) {
-          log.write( 'error', 'Error on report writi  ng' );
-        }
+    return new Promise( function ( resolve, reject ) {
+      let path = reportFolder + id + extension;
+      add( list ).then( function () {
+        fs.appendFile( path, output, 'utf-8', function ( error ) {
+          if ( error ) {
+            log.write( 'error', 'Error on report writi  ng' );
+          }
+        });
       });
     });
-    return;
   }
   this.init = function ( inid, inversion ) {
     id                 = inid;

@@ -175,8 +175,9 @@ function main () {
             report.init( id, version );
             waitForTest().then( function () {
               systemTest().then( function ( list ) {
-                report.write( list );
-                finish();
+                report.write( list ).then( function () {
+                  finish();
+                })
               }).catch( function () { error(); });
             });
           }).catch( function () { error(); });
@@ -186,6 +187,5 @@ function main () {
   });
   return;
 }
-
 
 main();
