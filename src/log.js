@@ -39,6 +39,9 @@ function write ( type, text ) {
     case 'message':
       mark = chalk.greenBright( '[' + type.toUpperCase() + ']' );
       break;
+    case 'task':
+      mark = chalk.magentaBright( '[' + type.toUpperCase() + ']' );
+      break;
     default:
       mark = '[' + type.toUpperCase() + ']';
       break;

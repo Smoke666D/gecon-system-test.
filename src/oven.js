@@ -18,11 +18,14 @@ function Oven ( id, client, type ) {
   this.output = 0;
   this.type   = type;
 
+  const succesCode = 1;
+
   function read ( adr ) {
     return new Promise( function ( resolve, reject ) {
       client.setID( self.id );
-      let val = await client.readInputRegisters( adr, 1 );
-      resolve( val.data[0] );
+      client.readInputRegisters( adr, 1 ).then( function ( val ) {
+        resolve( val.data[0] );
+      });
     });
   }
   function write ( adr, data ) {
@@ -35,11 +38,11 @@ function Oven ( id, client, type ) {
         }
       }
       client.setID( self.id );
-      client.writeRegisters( adr, data );
-      resolve();
+      client.writeRegisters( adr, data ).then( function ( data ) {
+        resolve( data );
+      });
     });
   }
-
   this.set = function ( bit, data ) {
     return new Promise( function ( resolve, reject ) {
       if ( self.type == 'dout' ) {
@@ -49,8 +52,13 @@ function Oven ( id, client, type ) {
           } else {
             value |= ~(0x0001 << bit );
           }
-          write( adrOvenMap.output, value ).then ( function () {
-            resolve();
+          write( adrOvenMap.output, value ).then( function ( val ) {
+            if ( val == succesCode ) {
+              resolve();
+            } else {
+              log.write( 'error', ( 'Error on writing to modbus device with ID ' + self.id ) );
+              reject();
+            }
           });
         });
       } else {
@@ -86,6 +94,9 @@ function Oven ( id, client, type ) {
         reject( 'Wrong timeout type. It need to be number' );
       }
     });
+  }
+  this.getSuccesCode = function () {
+    return succesCode;
   }
 
   return;

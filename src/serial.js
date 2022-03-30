@@ -97,7 +97,6 @@ function SerialEnv () {
 
   return;
 }
-
 function checkPath ( path ) {
   return new Promise( function ( resolve, reject ) {
     var result = false;
@@ -119,6 +118,8 @@ function Serial () {
   var port     = null;
   var input    = '';
   var inFinish = false;
+
+  const succesCode  = 'ok';
 
   function handler ( data ) {
     let buf = data.toString();
@@ -175,7 +176,8 @@ function Serial () {
         }, delay );
       }
       if ( counter >= readIterat ) {
-        reject( "Serial port read timeout" );
+        log.write( 'error', 'Serial port read timeout' );
+        reject();
       }
     });
   }
@@ -187,20 +189,8 @@ function Serial () {
       resolve();
     });
   }
-  this.assert = function ( request, expected ) {
-    return new Promise( function ( resolve, reject ) {
-      self.write( request ).then( function() {
-        self.read().then( function ( data ) {
-          if ( data == expected ) {
-            resolve();
-          } else {
-            reject( 'Anexpected data on "' + request + '" request' );  
-          }
-        }).catch( function ( error ) {
-          reject( error );
-        });
-      });
-    });
+  this.getSuccesCode = function () {
+    return succesCode;
   }
   return;
 }
