@@ -28,7 +28,13 @@ const serial = {
     'storage'   : 'storage', // yes
     'id'        : 'id',
     'ip'        : 'ip,',
-    'mac'       : 'mac'
+    'mac'       : 'mac',
+    'version'   : 'version'
+  },
+  'versions' : {
+    'bootloader' : 0,
+    'firmware'   : 1,
+    'hardware'   : 2
   },
   'state' : {
     'on'  : 'on',

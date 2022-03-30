@@ -15,17 +15,19 @@ function read ( text ) {
     })
   });
 }
+function getDate () {
+  var today = new Date();
+  return today.getFullYear() + '-' + 
+         ( ( "0" + ( today.getMonth() + 1 ) ).slice(-2) ) + '-' + 
+         ( "0" + today.getDate() ).slice(-2) + ' ' +
+         ( "0" + today.getHours() ).slice(-2) + ":" + 
+         ( "0" + today.getMinutes() ).slice(-2) + ":" + 
+         ( "0" + today.getSeconds() ).slice(-2); 
+}
 function write ( type, text ) {
-  var today     = new Date();
   var mark      = null;
   var seporator = '';
-  var date      = today.getFullYear() + '-' + 
-                  ( ( "0" + ( today.getMonth() + 1 ) ).slice(-2) ) + '-' + 
-                  ( "0" + today.getDate() ).slice(-2) + ' ' +
-                  ( "0" + today.getHours() ).slice(-2) + ":" + 
-                  ( "0" + today.getMinutes() ).slice(-2) + ":" + 
-                  ( "0" + today.getSeconds() ).slice(-2); 
-          
+  var date      = getDate();
   for ( var i=0; i<( typeFildLength - type.length ); i++ ) {
     seporator += ' ';
   }
@@ -60,5 +62,6 @@ function write ( type, text ) {
   return;
 }
 
-module.exports.write = write;
-module.exports.read  = read;
+module.exports.write   = write;
+module.exports.read    = read;
+module.exports.getDate = getDate;

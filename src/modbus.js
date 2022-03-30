@@ -99,3 +99,4 @@ module.exports.dinMap       = dinMap;
 module.exports.generatorMap = generatorMap;
 module.exports.currentMap   = currentMap;
 module.exports.mainsMap     = mainsMap;
+module.exports.speedMap     = speedMap;
