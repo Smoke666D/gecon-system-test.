@@ -82,6 +82,14 @@ function Modbus () {
       reject();
     });
   }
+  this.read = function ( id, adr ) {
+    return new Promise( function ( resolve, reject ) {
+      self.client.setID( id );
+      self.client.readInputRegisters( adr, 1 ).then( function ( val ) {
+        resolve( val.data[0] );
+      });
+    });
+  }
   return;
 }
 

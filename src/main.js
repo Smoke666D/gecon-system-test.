@@ -5,7 +5,7 @@ const Envir      = require( './serial.js' ).SerialEnv;
 const Modbus     = require( './modbus.js' ).Modbus;
 const StLink     = require( './st-link.js' ).StLink;
 const Assert     = require( './asserts.js').Assert;
-const gecon      = require( './gecon.js');
+const gecon      = require( './gecon.js' );
 const systemTest = require( './sysTest.js' ).systemTest;
 const reports    = require( './report.js');
 
@@ -174,11 +174,11 @@ function main () {
           getData().then( function () {
             report.init( id, version );
             waitForTest().then( function () {
-              systemTest().then( function ( list ) {
+              systemTest( assert ).then( function ( list ) {
                 report.write( list ).then( function () {
                   finish();
-                })
-              }).catch( function () { error(); });
+                });
+              });
             });
           }).catch( function () { error(); });
         }); 

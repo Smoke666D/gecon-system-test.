@@ -152,6 +152,19 @@ function Assert ( serial, modbus ) {
       });
     });
   }
+  this.modbus  = function ( id, adr, min, max, name ) {
+    return new Promise ( function ( resolve, reject ) {
+      modbus.red( id, adr ).then( function ( data ) {
+        if ( ( data >= min ) && ( data <= max ) ) {
+          log.write( 'message', ( name + ' - Ok' ) );
+          resolve( 1 );
+        } else {
+          log.write( 'warning', ( name + ' - Fail' ) );
+          resolve( 0 );
+        }
+      });
+    });
+  }
   return;
 }
 

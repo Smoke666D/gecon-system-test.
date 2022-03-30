@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 const log      = require( './log.js' ); 
 const ethernet = require( './ethernet.js' );
+const gecon    = require( './gecon.js' );
 
 function Record ( name, res ) {
   this.name = name;
   this.res  = res;
 }
 
-function systemTest () {
+function systemTest ( assert ) {
   return new Promise( function ( resolve, reject ) {
     let testLength = 1;
     let testSecces = 0;
@@ -312,7 +313,7 @@ function systemTest () {
       });
     }
     function testEthernet () {
-      return new Promise( function ( resolve, reject ) {
+      return new Promise( function ( resolve ) {
         ethernet.test( ip ).then( function () {
           log.write( 'message', 'Ethernet - Ok' );
           list.push( new Record( 'Ethernet', 1 ) );
@@ -322,6 +323,14 @@ function systemTest () {
           list.push( new Record( 'Ethernet', 0 ) );
           resolve( 0 );
         });
+      });
+    }
+    function testModbus () {
+      return new Promise( function ( resolve ) {
+        assert.modbus( gecon.modbus.id, gecon.modbus.map.battery, gecon.normal.battery.min, gecon.normal.battery.max, 'Modbus' ).then( function ( res ) {
+          list.push( new Record( 'Modbus', res ) );
+          resolve( res );
+        })
       });
     }
     async function run ( test, onError  ) {
@@ -376,17 +385,17 @@ function systemTest () {
     run( testButtonDown( 3 ),       reject() );
     run( testButtonDown( 4 ),       reject() );
     run( testEthernet(),            reject() );
+    run( testModbus(),              reject() );
     testSecces = 0;
     list.forEach( function ( record ) {
       testSecces += record.res;
     });
     if ( testSecces == testLength ) {
       log.write( 'message', 'System test finished seccesful=)')
-      resolve();
     } else {
       log.write( 'warning', ( 'System test finished with errors. There are ' + ( testLength - testSecces ) + ' unseccesful tests' ) );
-      reject();
     }
+    resolve( list );
 
 /*
     testStorage().then( function ( res ) {
@@ -431,17 +440,18 @@ function systemTest () {
                                                                                   testButtonDown( 3 ).then( function ( res ) {
                                                                                     testButtonDown( 4 ).then( function ( res ) {
                                                                                       testEthernet().then( function ( res ) {
-                                                                                        testSecces = 0;
-                                                                                        list.forEach( function ( record ) {
-                                                                                          testSecces += record.res;
-                                                                                        });
-                                                                                        if ( testSecces == testLength ) {
-                                                                                          log.write( 'message', 'System test finished seccesful=)')
-                                                                                          resolve();
-                                                                                        } else {
-                                                                                          log.write( 'warning', ( 'System test finished with errors. There are ' + ( testLength - testSecces ) + ' unseccesful tests' ) );
-                                                                                          reject();
-                                                                                        }
+                                                                                        testModbus().then( function ( res ) {
+                                                                                          testSecces = 0;
+                                                                                          list.forEach( function ( record ) {
+                                                                                            testSecces += record.res;
+                                                                                          });
+                                                                                          if ( testSecces == testLength ) {
+                                                                                            log.write( 'message', 'System test finished seccesful=)')
+                                                                                          } else {
+                                                                                            log.write( 'warning', ( 'System test finished with errors. There are ' + ( testLength - testSecces ) + ' unseccesful tests' ) );
+                                                                                          }
+                                                                                          resolve( list );
+                                                                                        }).catch( function () { reject(); });  
                                                                                       }).catch( function () { reject(); });
                                                                                     }).catch( function () { reject(); });    
                                                                                   }).catch( function () { reject(); });    

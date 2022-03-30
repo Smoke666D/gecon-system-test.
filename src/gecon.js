@@ -52,7 +52,7 @@ const serial = {
 const normal = {
   'battery' : {
     'min' : 23,
-    'max' : 24
+    'max' : 24,
   },
   'oil' : {
     'min' : 0,
@@ -108,6 +108,59 @@ const normal = {
     'delay'   : 100,
   }
 }
+const modbus = {
+  'id' : 10,
+  'map' : {
+    'oil'                : 0,
+    'coolant'            : 1,
+    'fuel'               : 2,
+    'speed'              : 3,
+    'mainsPhaseL1'       : 4,
+    'mainsPhaseL2'       : 5,
+    'mainsPhaseL3'       : 6,
+    'mainsLineL1'        : 7,
+    'mainsLineL2'        : 8,
+    'mainsLineL3'        : 9,
+    'mainsFreq'          : 10,
+    'generatorPhaseL1'   : 11,
+    'generatorPhaseL2'   : 12,
+    'generatorPhaseL3'   : 13,
+    'generatorLineL1'    : 14,
+    'generatorLineL2'    : 15,
+    'generatorLineL3'    : 16,
+    'currentL1'          : 17,
+    'currentL2'          : 18,
+    'currentL3'          : 19,
+    'generatorFreq'      : 20,
+    'consFi'             : 21,
+    'powerActive'        : 22,
+    'powerReactive'      : 23,
+    'powerFull'          : 24,
+    'battery'            : 25,
+    'charger'            : 26,
+    'external'           : 27,
+    'workTime'           : 28,
+    'workMin'            : 29,
+    'startNumber'        : 30,
+    'powerReactiveUsage' : 31,
+    'powerActiveUsage'   : 32,
+    'powerFullUsage'     : 33,
+    'fuelUsage'          : 34,
+    'fuelMomentalRate'   : 35,
+    'fuelAverageRate'    : 36,
+    'DOUT'               : 37,
+    "DIN"                : 38,
+    'deviceStatus'       : 39,
+    'status'             : 40,
+    'error0'             : 41,
+    'error1'             : 42,
+    'error2'             : 43,
+    'warning0'           : 44,
+    'warning1'           : 45,
+    'control'            : 46
+  }
+}
 
 module.exports.serial = serial;
 module.exports.normal = normal;
+module.exports.modbus = modbus;
