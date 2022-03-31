@@ -333,6 +333,18 @@ function systemTest ( assert ) {
         })
       });
     }
+    function testTime () {
+      return new Promise( function ( resolve, reject ) {
+        assert.charge( makeSerialRequest( gecon.serial.command.set, gecon.serial.target.time, gecon.normal.time.value ),
+                       makeSerialRequest( gecon.serial.command.get, gecon.serial.target.time ),
+                       gecon.normal.time.timeout,
+                       gecon.normal.time.expected,
+                       'Time' ).then( function ( res ) {
+          list.push( new Record( 'Time', res ) );
+          resolve( res );
+        }).catch( function () { reject() });
+      });
+    }
     async function run ( test, onError  ) {
       try {
         return await test();
@@ -344,6 +356,7 @@ function systemTest ( assert ) {
     list = [];
 
     run( testStorage(),             reject() );
+    run( testTime(),                reject() );
     run( testButtonUp( 0 ),         reject() );
     run( testButtonUp( 1 ),         reject() );
     run( testButtonUp( 2 ),         reject() );

@@ -50,6 +50,11 @@ const serial = {
   },
 };
 const normal = {
+  'time' : {
+    'value'    : '21.10.2022.11.45.24.',
+    'expected' : '21.10.2022.11.45.28.',
+    'timeout'  : 5000
+  },
   'battery' : {
     'min' : 23,
     'max' : 24,

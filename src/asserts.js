@@ -43,6 +43,31 @@ function Assert ( serial, modbus ) {
       });
     });
   }
+  this.charge  = function ( set, get, timeout, expected, name ) {
+    return new Promise ( function ( resolve, reject ) {
+      serial.write( set ).then( function() {
+        serial.read().then( function ( data ) {
+          if ( data == serial.getSuccesCode ) {
+            delay( timeout ).then( function () {
+              serial.write( get ).then( function() {
+                serial.read().then( function ( data ) {
+                  if ( parseInt( data ) > parseInt( expected ) ) {
+                    log.write( 'message', ( name + ' - Ok' ) );
+                    resolve( 1 );
+                  } else {
+                    log.write( 'warning', ( name + ' - Fail' ) );
+                    resolve( 0 );
+                  }
+                }).catch( function () { reject(); });
+              });
+            });
+          } else {
+            reject();
+          }
+        }).catch( function () { reject(); });
+      });
+    });
+  }
   this.compare = function ( dio = null, request, min, max, timeout, name ) {
     return new Promise ( function ( resolve, reject ) {
       isModbusSet( dio ).then( function () {
