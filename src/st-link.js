@@ -109,6 +109,13 @@ function StLink () {
       });
     });
   }
+  this.reset = function () {
+    return new Promise( function ( resolve, reject ) {
+      const message = spawn( 'ST-LINK_CLI', command.reset, [] );
+      log.write( 'message', 'ST-LINK has restarted controller.' );
+      resolve();
+    });
+  }
   this.flash = function () {
     return new Promise( function ( resolve, reject ) {
       if ( checkHexPath( bootloaderFileName ) == true ) {

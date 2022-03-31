@@ -8,6 +8,7 @@ const Assert     = require( './asserts.js').Assert;
 const gecon      = require( './gecon.js' );
 const systemTest = require( './sysTest.js' ).systemTest;
 const reports    = require( './report.js');
+const fs         = require( 'fs' );
 
 var doutMap      = require( './modbus.js' ).doutMap;
 var dinMap       = require( './modbus.js' ).dinMap;
@@ -30,10 +31,12 @@ let mac = '';
 
 const setupSerialFile = 'serial.txt';
 const setupModbusFile = 'modbus.txt';
+const macAddressFile  = 'mac.txt';
 
 const serialSpeed  = 115200;
 const modbusSpeed  = 115200;
 const resetTimeout = 10000;  /* ms */
+const macBase      = 0x320000000000;
 
 function modbusInit () {
   return new Promise( function ( resolve, reject ) {
@@ -166,6 +169,48 @@ function waitForTest () {
     });
   });
 }
+function getNewMAC () {
+  return new Promise( function ( resolve, reject ) {
+    fs.readFile( macAddressFile, 'utf-8', function ( data ) {
+      let lines = data.split(/\r?\n/);
+      let adr   = macBase;
+      if ( lines.length > 0 ) {
+        adr = parseInt( lines[lines.length - 1], 16 ) + 1;
+      }
+      fs.appendFile( macAddressFile, last.toString( 16 ), { encoding : 'utf-8' }, function ( error ) {
+        if ( error ) {
+          log.write( 'error', 'Error on writing to MAC address file')
+          reject();
+        }
+        let string = adr.toString( 16 );
+        let output = '';
+        for ( var i=0; i<( string.length / 2 ); i++ ) {
+          output += string.substring( (2*i), (2*i + 2) ) + ':';
+        }
+        log.write( 'message', ( 'New MAC address is ' + output ) );
+        resolve( adr );
+      });
+    });
+  });
+}
+function writeMAC () {
+  return new Promise( function ( resolve, reject ) {
+    getNewMAC().then( function ( data ) {
+      serial.write( makeSerialRequest( gecon.serial.command.set, gecon.serial.target.mac, data ) ).then( function () {
+        serial.read().then( function ( response ) {
+          if ( response == gecon.serial.status.ok ) {
+            log.wtite( 'message', 'MAC address has been written. The changes will take effect after reset.' );
+            stlink.reset().then( function () {
+              delay( resetTimeout ).then( function () {
+                resolve();
+              });
+            });
+          }
+        });
+      }).catch( function () { reject(); });
+    }).catch( function () { reject(); });
+  });
+}
 function main () {
   start().then( function () {
     init().then( function () {
@@ -176,7 +221,9 @@ function main () {
             waitForTest().then( function () {
               systemTest( assert ).then( function ( list ) {
                 report.write( list ).then( function () {
-                  finish();
+                  writeMAC().then( function () {
+                    finish();
+                  }).catch( function () { error(); });
                 });
               });
             });
