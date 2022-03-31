@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "modbus-serial": "^8.0.5",
+    "node-hid": "^2.1.1",
     "serialport": "^9.0.7"
   },
   "bin": {

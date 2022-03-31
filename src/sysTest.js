@@ -2,6 +2,7 @@
 const log      = require( './log.js' ); 
 const ethernet = require( './ethernet.js' );
 const gecon    = require( './gecon.js' );
+const USB      = require( './usb.js' );
 
 function Record ( name, res ) {
   this.name = name;
@@ -345,6 +346,20 @@ function systemTest ( assert ) {
         }).catch( function () { reject() });
       });
     }
+    function testUSB () {
+      return new Promise( function ( resolve, reject ) {
+        let usb = new USB();
+        usb.scan().then( function ( device ) {
+          log.write( 'message', 'USB - Ok' );
+          list.push( new Record( 'USB', 1 ) );
+          resolve( 1 );
+        }).catch( function () {
+          log.write( 'message', 'USB - Ok' );
+          list.push( new Record( 'USB', 0 ) );
+          resolve( 0 );
+        });
+      });
+    }
     async function run ( test, onError  ) {
       try {
         return await test();
@@ -355,6 +370,7 @@ function systemTest ( assert ) {
 
     list = [];
 
+    run( testUSB(),                 reject() );
     run( testStorage(),             reject() );
     run( testTime(),                reject() );
     run( testButtonUp( 0 ),         reject() );
