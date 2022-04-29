@@ -9,6 +9,8 @@ const gecon      = require( './gecon.js' );
 const systemTest = require( './sysTest.js' ).systemTest;
 const reports    = require( './report.js');
 const fs         = require( 'fs' );
+var   doutMap    = require( './modbus.js' ).doutMap;
+var   dinMap     = require( './modbus.js' ).dinMap;
 
 var doutMap      = require( './modbus.js' ).doutMap;
 var dinMap       = require( './modbus.js' ).dinMap;
@@ -67,11 +69,19 @@ function start () {
   });
 }
 function error () {
-  log.write( 'error', 'Finish with error!' );
+  modbus.close().then( function () {
+    serial.close().then( function () {
+      log.write( 'error', 'Finish with error!' );
+    });
+  });
   return;
 }
 function finish () {
-  log.write( 'message', 'Finish!' );
+  modbus.close().then( function () {
+    serial.close().then( function () {
+      log.write( 'message', 'Finish!' );
+    });
+  });
   return;
 }
 function init () {
@@ -211,6 +221,30 @@ function writeMAC () {
     }).catch( function () { reject(); });
   });
 }
+
+function testModBus () {
+  start().then( function() {
+    modbusInit().then( function () {
+      modbus.getOvenByID( dinMap[0].id ).then( function ( oven ) {
+        oven.get( dinMap[0].bit ).then( function () {
+          oven.get( dinMap[1].bit ).then( function () {
+            modbus.getOvenByID( doutMap[0].id ).then( function ( oven ) {
+              doutMap[0].state = true;
+              oven.set( doutMap[0].bit, doutMap[0].state ).then( function () {
+                doutMap[0].state = false;
+                oven.set( doutMap[0].bit, doutMap[0].state ).then( function () {
+                  finish();
+                }).catch( function () { error(); } );
+              }).catch( function () { error(); } );
+            }).catch( function () { error(); } );
+          }).catch( function () { error(); } );
+        }).catch( function () { error(); } );
+      }).catch( function () { error(); } );
+    }).catch( function () { error(); } );
+  }).catch( function () { error(); } );
+  return;
+}
+
 function main () {
   start().then( function () {
     init().then( function () {
@@ -235,4 +269,5 @@ function main () {
   return;
 }
 
-main();
+//main();
+testModBus();

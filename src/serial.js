@@ -152,8 +152,10 @@ function Serial () {
       if ( port != null ) {
         port.close( function ( error ) {
           if ( error ) {
-            reject( "Error on serial port closing" );
+            log.write( 'error', 'Error on serial port closing')
+            reject();
           } else {
+            log.write( 'message', 'Close serial port')
             resolve();
           }
         });

@@ -3,6 +3,8 @@ const log      = require( './log.js' );
 const ethernet = require( './ethernet.js' );
 const gecon    = require( './gecon.js' );
 const USB      = require( './usb.js' );
+const doutMap  = require( './modbus.js' ).doutMap;
+const dinMap   = require( './modbus.js' ).dinMap;
 
 function Record ( name, res ) {
   this.name = name;

@@ -4,10 +4,10 @@ const ModbusRTU = require( 'modbus-serial' );
 const Oven      = require( './oven.js' ).Oven;
 
 const ovenNumber = 2;
-const ovenID     = [ 0, 1 ];
+const ovenID     = [ 1, 2 ];
 const ovenType   = [ 'dout', 'din' ];
 
-var doutMap = [
+var dinMap = [
   new MbDIO( ovenID[1], 0 ),
   new MbDIO( ovenID[1], 1 ),
   new MbDIO( ovenID[1], 2 ),
@@ -19,7 +19,7 @@ var doutMap = [
   new MbDIO( ovenID[1], 8 ),
   new MbDIO( ovenID[1], 9 ),
 ];
-var dinMap = [
+var doutMap = [
   new MbDIO( ovenID[0], 12 ),
   new MbDIO( ovenID[0], 13 ),
   new MbDIO( ovenID[0], 14 ),
@@ -63,7 +63,7 @@ function Modbus () {
         self.client.connectRTU( path, { baudRate: speed }, function () {
           log.write( 'message', ( path + 'has opened as modbus' ) );
           initOven().then( function () {
-            log.write( 'message', ( 'There are ' + ovenNumber + ' Oven device on ModBus' ) );
+            log.write( 'message', ( 'Declared ' + ovenNumber + ' Oven device on ModBus' ) );
             resolve();
           })
         });
@@ -76,7 +76,7 @@ function Modbus () {
     return new Promise( function ( resolve, reject ) {
       self.ovens.forEach( function ( oven, i ) {
         if ( oven.id == id ) {
-          resolve( i );
+          resolve( oven );
         }
       });
       reject();
@@ -87,6 +87,14 @@ function Modbus () {
       self.client.setID( id );
       self.client.readInputRegisters( adr, 1 ).then( function ( val ) {
         resolve( val.data[0] );
+      });
+    });
+  }
+  this.close = function () {
+    return new Promise( function ( resolve ) {
+      self.client.close( function () {
+        log.write( 'message', 'Close ModBus' );
+        resolve();
       });
     });
   }
