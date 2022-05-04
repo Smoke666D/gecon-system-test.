@@ -247,10 +247,6 @@ function testModBus () {
   return;
 }
 
-async function run ( test ) {
-  return await test();
-}
-
 async function test ( flash = false ) {
   try {
     await start();
@@ -281,7 +277,7 @@ function printHelp () {
 }
 
 function printVersion () {
-  console.log( 'gecon-system-test ' );
+  console.log( 'gecon-system-test version ' + process.env.npm_package_version );
   process.exit();
   return;
 }

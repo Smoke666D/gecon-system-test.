@@ -1,6 +1,6 @@
 {
   "name": "gecon-system-test",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "System test for \"Gecon\" generator controller",
   "main": "src/main.js",
   "author": "Mike Mihaylov",
