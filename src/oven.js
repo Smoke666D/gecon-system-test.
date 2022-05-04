@@ -54,7 +54,11 @@ function Oven ( id, client, type ) {
         }
         write( bit, value ).then( function ( out ) {
           if ( ( out.address == bit ) && ( out.length == 1 ) ) {
-            log.write( 'message', ( 'Set Oven ID ' + self.id + '@0x' + bit.toString( 16 ) + '.' + bit + '=' + value ) );
+            let adr = bit.toString( 16 ).toUpperCase();
+            if ( adr.length == 1 ) {
+              adr = '0' + adr;
+            }
+            log.write( 'message', ( 'Set Oven ID ' + self.id + '@0x' + adr + '.' + bit + '=' + value ) );
             resolve();
           } else {
             log.write( 'error', ( 'Error on writing to Oven with ID ' + self.id ) );
@@ -62,7 +66,7 @@ function Oven ( id, client, type ) {
           }
         });
       } else {
-        log.write( 'error', ( self.id + ' Oven device is not din' ) );
+        log.write( 'error', ( 'ID' + self.id + ' Oven device is not din' ) );
         reject();
       }
     });

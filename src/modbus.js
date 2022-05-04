@@ -7,6 +7,9 @@ const ovenNumber = 2;
 const ovenID     = [ 1, 2 ];
 const ovenType   = [ 'dout', 'din' ];
 
+const readTimeout = 1000; /* ms */
+const readIterat  = 10;
+
 var dinMap = [
   new MbDIO( ovenID[1], 0 ),
   new MbDIO( ovenID[1], 1 ),
@@ -61,7 +64,7 @@ function Modbus () {
     return new Promise( function ( resolve, reject ) {
       serial.checkPath( path ).then( function () {
         self.client.connectRTU( path, { baudRate: speed }, function () {
-          log.write( 'message', ( path + 'has opened as modbus' ) );
+          log.write( 'message', ( path + ' has opened as modbus' ) );
           initOven().then( function () {
             log.write( 'message', ( 'Declared ' + ovenNumber + ' Oven device on ModBus' ) );
             resolve();
@@ -84,18 +87,37 @@ function Modbus () {
   }
   this.read = function ( id, adr ) {
     return new Promise( function ( resolve, reject ) {
+      const delay = readTimeout / readIterat;
+      var counter = 0;
       self.client.setID( id );
-      self.client.readInputRegisters( adr, 1 ).then( function ( val ) {
-        resolve( val.data[0] );
-      });
+      function loop () {
+        setTimeout ( function () {
+          counter++;
+          self.client.readInputRegisters( adr, 1 ).then( function ( val ) {
+            resolve( val.data[0] );
+          });
+          if ( counter < readIterat ) {
+           loop(); 
+          } else {
+            log.write( 'error', 'ModBus read timeout' );
+            reject();
+          }
+        }, delay );
+      }
+      loop();
     });
   }
   this.close = function () {
     return new Promise( function ( resolve ) {
-      self.client.close( function () {
-        log.write( 'message', 'Close ModBus' );
+      if ( self.client._port != undefined )
+      {
+        self.client.close( function () {
+          log.write( 'message', 'Close ModBus' );
+          resolve();
+        });
+      } else {
         resolve();
-      });
+      }
     });
   }
   return;

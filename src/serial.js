@@ -2,8 +2,9 @@
 const SerialPort = require( 'serialport' );
 const log        = require( './log.js' );
 const fs         = require( 'fs' );
+const gecon      = require( './gecon.js' );
 
-const readTimeout = 3000; /* ms */
+const readTimeout = 1000; /* ms */
 const readIterat  = 10;
 
 function SerialEnv () {
@@ -117,16 +118,19 @@ function Serial () {
   var self     = this;
   var port     = null;
   var input    = '';
-  var inFinish = false;
+  var inFinish = true;
 
-  const succesCode  = 'ok';
+  function isInputFinish () {
+    if ( input.indexOf( gecon.serial.postfix ) > 0 ) {
+      inFinish = true;
+    }
+    return inFinish;
+  }
 
   function handler ( data ) {
     let buf = data.toString();
-    if ( data.indexOf( '\n' > 0 ) ) {
-      inFinish = true;
-      input   += buf;
-    }
+    input   += buf;
+    isInputFinish();
     return;
   }
   this.init = function ( path, speed ) {
@@ -168,31 +172,39 @@ function Serial () {
     return new Promise( function ( resolve, reject ) {
       const delay = readTimeout / readIterat;
       var counter = 0;
-      while ( counter < readIterat ) {
+      function loop ( onError ) {
         setTimeout( function () { 
-          if ( inFinish == true ) {
-            resolve( input );
-          }
           counter++;
+          isInputFinish();
+          if ( inFinish == true ) {
+            resolve( input.substring( 0, input.indexOf( gecon.serial.postfix ) ) );
+          } else if ( counter < readIterat ) {
+            loop( onError );
+          } else {
+            onError();
+          }
           return; 
         }, delay );
       }
-      if ( counter >= readIterat ) {
+      loop( function () {
         log.write( 'error', 'Serial port read timeout' );
         reject();
-      }
+      });
     });
   }
   this.write = function ( text ) {
     return new Promise( function ( resolve, reject ) {
-      inFinish = false;
-      input    = '';
-      port.write( text );
-      resolve();
+      if ( inFinish == true ) {
+        inFinish = false;
+        input    = '';
+        port.write( text );
+        resolve();
+      } else {
+        reject();
+      }
+
+      
     });
-  }
-  this.getSuccesCode = function () {
-    return succesCode;
   }
   return;
 }

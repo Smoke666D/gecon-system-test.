@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-const log  = require( './log.js' ); 
+const log   = require( './log.js' ); 
+const gecon = require( './gecon.js' );
 
 function Assert ( serial, modbus ) {
   var self   = this;
@@ -28,15 +29,19 @@ function Assert ( serial, modbus ) {
       }
     });
   }
-  this.serial  = function ( request, expected, name ) {
+  this.serial  = function ( request, expected, name=null ) {
     return new Promise ( function ( resolve, reject ) {
       serial.write( request ).then( function() {
         serial.read().then( function ( data ) {
           if ( data == expected ) {
-            log.write( 'message', ( name + ' - Ok' ) );
+            if ( name != null ) {
+              log.write( 'message', ( name + ' - Ok' ) );
+            }
             resolve( 1 );
           } else {
-            log.write( 'warning', ( name + ' - Fail' ) );
+            if ( name != null ) {
+              log.write( 'warning', ( name + ' - Fail: await ' + expected + ' ,fact ' + data ) );
+            }
             resolve( 0 );
           }
         }).catch( function () { reject(); });
@@ -47,45 +52,58 @@ function Assert ( serial, modbus ) {
     return new Promise ( function ( resolve, reject ) {
       serial.write( set ).then( function() {
         serial.read().then( function ( data ) {
-          if ( data == serial.getSuccesCode ) {
+          if ( data == gecon.serial.status.ok ) {
             delay( timeout ).then( function () {
               serial.write( get ).then( function() {
                 serial.read().then( function ( data ) {
-                  if ( parseInt( data ) > parseInt( expected ) ) {
+                  var counter = 0;
+                  let buf1 = data;
+                  let buf2 = expected;
+                  for ( var i=0; i<5; i++ ) {
+                    if ( parseInt( buf1 ) == parseInt( buf2 ) ) {
+                      counter++;
+                    }
+                    buf1 = buf1.substring( data.indexOf('.') + 1 );
+                    buf2 = buf2.substring( data.indexOf('.') + 1 );
+                  }
+                  if ( parseInt( buf1 ) > parseInt( buf2 ) ) {
+                    counter++;
+                  }
+                  if ( counter == 6 ) {
                     log.write( 'message', ( name + ' - Ok' ) );
                     resolve( 1 );
                   } else {
-                    log.write( 'warning', ( name + ' - Fail' ) );
+                    log.write( 'warning', ( name + ' - Fail: await ' + expected + ' ,fact ' + data ) );
                     resolve( 0 );
                   }
                 }).catch( function () { reject(); });
               });
             });
           } else {
+            log.write( 'error', 'Error on CLI command: ' + set.substring( 0, set.indexOf( gecon.serial.postfix ) ) );
             reject();
           }
         }).catch( function () { reject(); });
       });
     });
   }
-  this.compare = function ( dio = null, request, min, max, timeout, name ) {
+  this.compare = function ( dio, request, min, max, timeout, name ) {
     return new Promise ( function ( resolve, reject ) {
       isModbusSet( dio ).then( function () {
         delay( timeout ).then( function () {
-          self.serial( request, expected ).then( function ( res ) {
-            if ( ( res > min ) && ( res < max ) ) {
-              log.write( 'message', ( name + ' - Ok' ) );
-            } else {
-              log.write( 'warning', ( name + ' - Fail' ) );
-            }
-            resolve( res );
-          }).catch( function () {
-            reject();
+          serial.write( request ).then( function() {
+            serial.read().then( function ( data ) {
+              data = parseInt( data );
+              if ( ( data >= min ) && ( data <= max ) ) {
+                log.write( 'message', ( name + ' - Ok' ) );
+              } else {
+                log.write( 'warning', ( name + ' - Fail: await between ' + min + ' and ' + max + ' ,fact ' + data ) );
+              }
+              resolve( data );
+            }).catch( function () { reject(); });
           });
         });
-      }).catch( function () {
-        reject();
-      }); 
+      }).catch( function () { reject(); }); 
     });
   }
   this.read    = function ( dio, request, expected, timeout, name ) {
@@ -93,12 +111,7 @@ function Assert ( serial, modbus ) {
       modbus.getOvenByID( dio.id ).then( function ( oven ) {
         oven.set( dio.bit, dio.state ).then( function () {
           delay( timeout ).then( function () {
-            self.serial( request, expected ).then( function ( res ) {
-              if ( res > 0 ) {
-                log.write( 'message', ( name + ' - Ok' ) );
-              } else {
-                log.write( 'warning', ( name + ' - Fail' ) );
-              }
+            self.serial( request, expected, name ).then( function ( res ) {
               resolve( res );
             }).catch( function () {
               reject();
@@ -110,16 +123,16 @@ function Assert ( serial, modbus ) {
       });
     });
   }
-  this.write   = function ( dio, request, expected, delay, name ) {
+  this.write   = function ( dio, request, expected, timeout, name ) {
     return new Promise ( function ( resolve, reject ) {
-      self.serial( request, self.serial.getSuccesCode() ).then( function () {
+      self.serial( request, gecon.serial.status.ok ).then( function () {
         delay( timeout ).then( function () {
           modbus.getOvenByID( dio.id ).then( function ( oven ) {
             oven.get( dio.bit ).then( function ( data ) {
               if ( data == expected ) {
                 log.write( 'message', ( name + ' - Ok' ) );
               } else {
-                log.write( 'warning', ( name + ' - Fail' ) );
+                log.write( 'warning', ( name + ' - Fail: await ' + expected + ' fact ' + data ) );
               }
               resolve( data );
             }).catch( function () {
@@ -136,30 +149,34 @@ function Assert ( serial, modbus ) {
     return new Promise ( function ( resolve, reject ) {
       let time = 0;
       log.write( 'task', 'Please, ' + name );
-      while ( time < timeout ) {
+      function loop () {
         setTimeout( function () {
           time += delay;
-          serial.write( request ).then( function() {
-            serial.read().then( function ( data ) {
-              if ( data == expected ) {
-                log.write( 'message', ( name + ' - Ok' ) );
-                resolve( 1 );
-              }
-            }).catch( function () { reject() });
-          });   
+          if ( time < timeout ) {
+            serial.write( request ).then( function() {
+              serial.read( false ).then( function ( data ) {
+                if ( data == expected ) {
+                  log.write( 'message', ( name + ' - Ok' ) );
+                  resolve( 1 );
+                } else {
+                  loop();
+                }
+              }).catch( function () { reject() });
+            });
+          } else {
+            log.write( 'warning', ( name + ' - Fail: out of timeout for event' ) );
+            resolve( 0 );
+          }
         }, delay );
       }
-      if ( time > timeout ) {
-        log.write( 'warning', ( name + ' - Fail' ) );
-        resolve( 0 );
-      }
+      loop();
     });
   }
   this.input   = function ( request, name ) {
     return new Promise ( function ( resolve, reject ) {
       serial.write( request ).then( function() {
         serial.read().then( function ( data ) {
-          if ( data == serial.getSuccesCode() ) {
+          if ( data == gecon.serial.status.ok ) {
             log.read( 'Is ' + name + '? (y/n) ').then( function ( input ) {
               if ( input == 'y' ) {
                 log.write( 'message', ( name + ' - Ok' ) );
@@ -179,15 +196,15 @@ function Assert ( serial, modbus ) {
   }
   this.modbus  = function ( id, adr, min, max, name ) {
     return new Promise ( function ( resolve, reject ) {
-      modbus.red( id, adr ).then( function ( data ) {
+      modbus.read( id, adr ).then( function ( data ) {
         if ( ( data >= min ) && ( data <= max ) ) {
           log.write( 'message', ( name + ' - Ok' ) );
           resolve( 1 );
         } else {
-          log.write( 'warning', ( name + ' - Fail' ) );
+          log.write( 'warning', ( name + ' - Fail: await beetwen ' + min + ' and ' + max + ' ,fact ' + data ) );
           resolve( 0 );
         }
-      });
+      }).catch( function () { reject(); });
     });
   }
   return;

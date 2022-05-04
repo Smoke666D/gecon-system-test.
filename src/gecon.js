@@ -51,37 +51,37 @@ const serial = {
 };
 const normal = {
   'time' : {
-    'value'    : '21.10.2022.11.45.24.',
-    'expected' : '21.10.2022.11.45.28.',
-    'timeout'  : 5000
+    'value'    : '21.10.22.11.45.24.',
+    'expected' : '21.10.22.11.45.26.',
+    'timeout'  : 3000
   },
   'battery' : {
-    'min' : 23,
+    'min' : 22,
     'max' : 24,
   },
   'oil' : {
     'min' : 0,
-    'max' : 1
+    'max' : 5
   },
   'coolant' : {
     'min' : 0,
-    'max' : 1
+    'max' : 260
   },
   'fuel' : {
     'min' : 0,
-    'max' : 1
+    'max' : 120
   },
   'charger' : {
     'min' : 0,
-    'max' : 1
+    'max' : 5
   },
   'dinTimeout' : {
-    'on'  : 10,
-    'off' : 10
+    'on'  : 100,
+    'off' : 100
   },
   'doutTimeout' : {
-    'on'  : 10,
-    'off' : 10
+    'on'  : 100,
+    'off' : 100
   },
   'generator' : {
     'timeout' : 10,

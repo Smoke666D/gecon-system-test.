@@ -2,7 +2,7 @@
 const log      = require( './log.js' ); 
 const ethernet = require( './ethernet.js' );
 const gecon    = require( './gecon.js' );
-const USB      = require( './usb.js' );
+const USB      = require( './usb.js' ).USB;
 const doutMap  = require( './modbus.js' ).doutMap;
 const dinMap   = require( './modbus.js' ).dinMap;
 
@@ -11,20 +11,21 @@ function Record ( name, res ) {
   this.res  = res;
 }
 
+function makeSerialRequest ( cmd, target, data = null ) {
+  let request = cmd + gecon.serial.separator + target;
+  if ( data != null ) {
+    request += gecon.serial.separator + data;
+  }
+  request += gecon.serial.postfix;
+  return request;
+}
+
 function systemTest ( assert ) {
   return new Promise( function ( resolve, reject ) {
     let testLength = 1;
     let testSecces = 0;
     let list       = [];
 
-    function makeSerialRequest ( cmd, target, data = null ) {
-      let request = cmd + gecon.serial.separator + target;
-      if ( data != null ) {
-        request += gecon.serial.separator + data;
-      }
-      request += gecon.serial.postfix;
-      return request;
-    }
     function testStorage () {
       return new Promise( function ( resolve, reject ) {
         assert.serial( makeSerialRequest( gecon.serial.command.get, gecon.serial.target.storage ), 
@@ -37,20 +38,17 @@ function systemTest ( assert ) {
         });
       });
     }
-    function testBattery () {
-      return new Promise( function ( resolve, reject ) {
-        assert.compare( null, 
-                        makeSerialRequest( gecon.serial.command.get, gecon.serial.target.battery ), 
-                        gecon.normal.battery.min, 
-                        gecon.normal.battery.max, 
-                        0, 
-                        'Battery' ).then( function ( res ) {
+    async function testBattery () {
+      let result =  new Promise( function ( resolve, reject ) {
+        let cmd = makeSerialRequest( gecon.serial.command.get, gecon.serial.target.battery );
+        let min = gecon.normal.battery.min;
+        let max = gecon.normal.battery.max;
+        assert.compare( null, cmd, min, max, 0, 'Battery' ).then( function ( res ) {
           list.push( new Record( 'Battery', res ) );
           resolve( res );
-        }).catch( function () {
-          reject();
-        });
+        }).catch( function () { reject(); });
       });
+      return await result;
     }
     function testFuel () {
       return new Promise( function ( resolve, reject ) {
@@ -114,19 +112,17 @@ function systemTest ( assert ) {
     }
     function testDout ( n ) {
       return new Promise( function ( resolve, reject ) {
-        let result = 0;
-        assert.write( doutMap[n],
-                      makeSerialRequest( gecon.serial.command.set, gecon.serial.target.dout, n ),
-                      gecon.state.ok,
-                      gecon.normal.doutTimeout.on,
-                      ( 'DOUT ' + n ) ).then( function ( res ) {
+        let result   = 0;
+        let request  = makeSerialRequest( gecon.serial.command.set, gecon.serial.target.dout, n );
+        let expected = '1'; 
+        let timeout  = gecon.normal.doutTimeout.on;
+        assert.write( dinMap[n], request, expected, timeout, ( 'DOUT ' + n ) ).then( function ( res ) {
           result += res;
           list.push( new Record( ( 'DOUT ' + n + ' on' ), res ) );
-          assert.write( doutMap[n],
-                        makeSerialRequest( gecon.serial.command.reset, gecon.serial.target.dout, n ),
-                        gecon.state.ok,
-                        gecon.normal.doutTimeout.on,
-                        ( 'DOUT ' + n ) ).then( function ( res ) {
+          request  = makeSerialRequest( gecon.serial.command.reset, gecon.serial.target.dout, n );
+          expected = '0';
+          timeout  = gecon.normal.doutTimeout.on;
+          assert.write( dinMap[n], request, expected, timeout, ( 'DOUT ' + n ) ).then( function ( res ) {
             list.push( new Record( ( 'DOUT ' + n + ' off' ), res ) );
             resolve( result + res );
           }).catch( function () { reject() });
@@ -135,21 +131,19 @@ function systemTest ( assert ) {
     }
     function testDin ( n ) {
       return new Promise( function ( resolve, reject ) {
-        dinMap[n].state = true;
-        let result = 0;
-        assert.read( dinMap[n],
-                     makeSerialRequest( gecon.serial.command.get, gecon.serial.target.din, n ),
-                     gecon.state.on,
-                     gecon.normal.dinTimeout.on,
-                     ( 'DIN ' + n ) ).then( function ( res ) {
+        doutMap[n].state = true;
+        let result   = 0;
+        let request  = makeSerialRequest( gecon.serial.command.get, gecon.serial.target.din, n );
+        let expected = gecon.serial.state.on;
+        let timeout  = gecon.normal.dinTimeout.on;
+        assert.read( doutMap[n], request, expected, timeout, ( 'DIN ' + n ) ).then( function ( res ) {
           result += res;
           list.push( new Record( ( 'DIN ' + n + ' on' ), res ) );
-          dinMap[n].state = false;
-          assert.read( dinMap[n],
-                      makeSerialRequest( gecon.serial.command.get, gecon.serial.target.din, n ),
-                      gecon.state.off,
-                      gecon.normal.dinTimeout.off,
-                      ( 'DIN ' + n ) ).then( function ( res ) {
+          doutMap[n].state = false;
+          request  = makeSerialRequest( gecon.serial.command.get, gecon.serial.target.din, n );
+          expected = gecon.serial.state.off;
+          timeout  = gecon.normal.dinTimeout.off;
+          assert.read( doutMap[n], request, expected, timeout, ( 'DIN ' + n ) ).then( function ( res ) {
             list.push( new Record( ( 'DIN ' + n + ' off' ), res ) );
             resolve( result + res );
           }).catch( function () { reject() });
@@ -282,21 +276,23 @@ function systemTest ( assert ) {
     }
     function testLED ( n ) {
       return new Promise( function ( resolve, reject ) {
-        let result = 0;
-        assert.input( makeSerialRequest( gecon.serial.command.set, gecon.serial.target.led, n ), ( 'LED ' + n + ' on' ) ).then( function ( res ) {
+        let result  = 0;
+        let request = makeSerialRequest( gecon.serial.command.set, gecon.serial.target.led, n );
+        assert.input( request, ( 'LED ' + n + ' on' ) ).then( function ( res ) {
           list.push( new Record( ( 'LED ' + n + ' on' ), res ) );
           result += res;
-          assert.input( makeSerialRequest( gecon.serial.command.reset, gecon.serial.target.led, n ), ( 'LED ' + n + ' off' ) ).then( function ( res ) {
+          request = makeSerialRequest( gecon.serial.command.reset, gecon.serial.target.led, n );
+          assert.input( request, ( 'LED ' + n + ' off' ) ).then( function ( res ) {
             list.push( new Record( ( 'LED ' + n + ' off' ), res ) );
             resolve( result + res );
           }).catch( function () { reject() });
         }).catch( function () { reject() });
       });
     }
-    function testButtonUp ( n ) {
+    async function testButtonUp ( n ) {
       return new Promise( function ( resolve, reject ) {
         assert.serial( makeSerialRequest( gecon.serial.command.get, gecon.serial.target.sw, n ), 
-                       gecon.state.off,
+                       gecon.serial.state.off,
                        ( "Switch button up " + n ) ).then( function ( res ) {
           list.push( new Record( ( "Switch button up " + n ), res ) );
           resolve( res );
@@ -305,11 +301,11 @@ function systemTest ( assert ) {
     }
     function testButtonDown ( n ) {
       return new Promise( function ( resolve, reject ) {
-        assert.event( makeSerialRequest( gecon.serial.command.get, gecon.serial.target.sw, n ), 
-                      gecon.state.on,
-                      gecon.normal.sw.delay,
-                      gecon.normal.sw.timeout,
-                      ( "Switch button down " + n ) ).then( function ( res ) {
+        let request  = makeSerialRequest( gecon.serial.command.get, gecon.serial.target.sw, n )
+        let expected = gecon.serial.state.on; 
+        let delay    = gecon.normal.sw.delay;
+        let timeout  = gecon.normal.sw.timeout;  
+        assert.event( request, expected, delay, timeout,( "Switch button down " + n ) ).then( function ( res ) {
           list.push( new Record( ( "Switch button down " + n ), res ) );
           resolve( res );
         }).catch( function () { reject() });
@@ -329,205 +325,125 @@ function systemTest ( assert ) {
       });
     }
     function testModbus () {
-      return new Promise( function ( resolve ) {
-        assert.modbus( gecon.modbus.id, gecon.modbus.map.battery, gecon.normal.battery.min, gecon.normal.battery.max, 'Modbus' ).then( function ( res ) {
+      return new Promise( function ( resolve, reject ) {
+        let id  = gecon.modbus.id
+        let adr = gecon.modbus.map.battery;
+        let min = gecon.normal.battery.min;
+        let max = gecon.normal.battery.max;
+        assert.modbus( id, adr, min, max, 'Modbus' ).then( function ( res ) {
           list.push( new Record( 'Modbus', res ) );
           resolve( res );
-        })
+        }).catch( function () { reject() });
       });
     }
     function testTime () {
       return new Promise( function ( resolve, reject ) {
-        assert.charge( makeSerialRequest( gecon.serial.command.set, gecon.serial.target.time, gecon.normal.time.value ),
-                       makeSerialRequest( gecon.serial.command.get, gecon.serial.target.time ),
-                       gecon.normal.time.timeout,
-                       gecon.normal.time.expected,
-                       'Time' ).then( function ( res ) {
-          list.push( new Record( 'Time', res ) );
+        let setRequest = makeSerialRequest( gecon.serial.command.set, gecon.serial.target.time, gecon.normal.time.value );
+        let getRequest = makeSerialRequest( gecon.serial.command.get, gecon.serial.target.time );
+        let timeout    = gecon.normal.time.timeout;
+        let expected   = gecon.normal.time.expected;
+        log.write( 'message', 'RTC test started. It will take ' + timeout + ' ms...' );
+        assert.charge( setRequest, getRequest, timeout, expected, 'RTC' ).then( function ( res ) {
+          list.push( new Record( 'RTC', res ) );
           resolve( res );
         }).catch( function () { reject() });
       });
     }
     function testUSB () {
-      return new Promise( function ( resolve, reject ) {
+      return new Promise( function ( resolve ) {
         let usb = new USB();
-        usb.scan().then( function ( device ) {
+        usb.scan().then( function () {
           log.write( 'message', 'USB - Ok' );
           list.push( new Record( 'USB', 1 ) );
           resolve( 1 );
         }).catch( function () {
-          log.write( 'message', 'USB - Ok' );
+          log.write( 'warning', 'USB - fail' );
           list.push( new Record( 'USB', 0 ) );
           resolve( 0 );
         });
       });
     }
-    async function run ( test, onError  ) {
+
+    function finish () {
+      return new Promise( function ( resolve ) {
+        list.forEach( function ( record ) {
+          testSecces += record.res;
+        });
+        if ( testSecces >= testLength ) {
+          log.write( 'message', 'System test finished seccesful=)')
+        } else {
+          log.write( 'warning', ( 'System test finished with errors. There are ' + ( testLength - testSecces ) + ' unseccesful tests' ) );
+        }
+        resolve();
+      });
+    }
+    async function run () {
+      list = [];
       try {
-        return await test();
-      } catch( data ) {
-        return onError();
+        /*
+        await testTime();
+        await testUSB();
+        await testButtonUp( 0 );
+        await testButtonUp( 1 );
+        await testButtonUp( 2 );
+        await testButtonUp( 3 );
+        await testButtonUp( 4 );
+        await testStorage();
+        await testBattery();
+        await testOil();
+        await testFuel();
+        await testCharger();
+        await testDin( 0 );
+        await testDin( 1 );
+        await testDin( 2 );
+        await testDin( 3 );
+        await testDout( 0 );
+        await testDout( 1 );
+        await testDout( 2 );
+        await testDout( 3 );
+        await testDout( 4 );
+        await testDout( 5 );
+        await testModbus(); // Error on device side 
+        */
+        /*
+        await testGeneratorVoltage( 0 );
+        await testGeneratorVoltage( 1 );
+        await testGeneratorVoltage( 2 );
+        await testMainsVoltage( 0 );
+        await testMainsVoltage( 1 );
+        await testMainsVoltage( 2 );
+        await testCurrent( 0 );
+        await testCurrent( 1 );
+        await testCurrent( 2 );
+        await testFrequency( 0 );
+        await testFrequency( 1 );
+        await testSpeed();
+        await testEthernet();
+        */
+        /*
+        await testButtonDown( 0 );
+        await testButtonDown( 1 );
+        await testButtonDown( 2 );
+        await testButtonDown( 3 );
+        await testButtonDown( 4 );
+        await testLED( 0 );
+        await testLED( 1 );
+        await testLED( 2 );
+        */
+        await finish();
+        return Promise.resolve( list );
+      } catch {
+        return Promise.reject();
       }
     }
-
-    list = [];
-
-    run( testUSB(),                 reject() );
-    run( testStorage(),             reject() );
-    run( testTime(),                reject() );
-    run( testButtonUp( 0 ),         reject() );
-    run( testButtonUp( 1 ),         reject() );
-    run( testButtonUp( 2 ),         reject() );
-    run( testButtonUp( 3 ),         reject() );
-    run( testButtonUp( 4 ),         reject() );
-    run( testBattery(),             reject() );
-    run( testOil(),                 reject() );
-    run( testCoolant(),             reject() );
-    run( testFuel(),                reject() );
-    run( testCharger(),             reject() );
-    run( testDin( 0 ),              reject() );
-    run( testDin( 1 ),              reject() );
-    run( testDin( 2 ),              reject() );
-    run( testDin( 3 ),              reject() );
-    run( testDout( 0 ),             reject() );
-    run( testDout( 1 ),             reject() );
-    run( testDout( 2 ),             reject() );
-    run( testDout( 3 ),             reject() );
-    run( testDout( 4 ),             reject() );
-    run( testDout( 5 ),             reject() );
-    run( testGeneratorVoltage( 0 ), reject() );
-    run( testGeneratorVoltage( 1 ), reject() );
-    run( testGeneratorVoltage( 2 ), reject() );
-    run( testMainsVoltage( 0 ),     reject() );
-    run( testMainsVoltage( 1 ),     reject() );
-    run( testMainsVoltage( 2 ),     reject() );
-    run( testCurrent( 0 ),          reject() );
-    run( testCurrent( 1 ),          reject() );
-    run( testCurrent( 2 ),          reject() );
-    run( testFrequency( 0 ),        reject() );
-    run( testFrequency( 1 ),        reject() );
-    run( testSpeed(),               reject() );
-    run( testLED( 0 ),              reject() );
-    run( testLED( 1 ),              reject() );
-    run( testLED( 2 ),              reject() );
-    run( testButtonDown( 0 ),       reject() );
-    run( testButtonDown( 1 ),       reject() );
-    run( testButtonDown( 2 ),       reject() );
-    run( testButtonDown( 3 ),       reject() );
-    run( testButtonDown( 4 ),       reject() );
-    run( testEthernet(),            reject() );
-    run( testModbus(),              reject() );
-    testSecces = 0;
-    list.forEach( function ( record ) {
-      testSecces += record.res;
+    run().then( function ( data ) {
+      resolve( data );
+    }).catch( function () {
+      reject();
     });
-    if ( testSecces == testLength ) {
-      log.write( 'message', 'System test finished seccesful=)')
-    } else {
-      log.write( 'warning', ( 'System test finished with errors. There are ' + ( testLength - testSecces ) + ' unseccesful tests' ) );
-    }
-    resolve( list );
-
-/*
-    testStorage().then( function ( res ) {
-      testButtonUp( 0 ).then( function ( res ) {
-        testButtonUp( 1 ).then( function ( res ) {
-          testButtonUp( 2 ).then( function ( res ) {
-            testButtonUp( 3 ).then( function ( res ) {
-              testButtonUp( 4 ).then( function ( res ) {
-                testBattery().then( function ( res ) {
-                  testOil().then( function ( res ) {
-                    testCoolant().then( function ( res ) {
-                      testFuel().then( function ( res ) {
-                        testCharger().then( function ( res ) {
-                          testDin( 0 ).then( function ( res ) {
-                            testDin( 1 ).then( function ( res ) {
-                              testDin( 2 ).then( function ( res ) {
-                                testDin( 3 ).then( function ( res ) {
-                                  testDout( 0 ).then( function ( res ) {
-                                    testDout( 1 ).then( function ( res ) {
-                                      testDout( 2 ).then( function ( res ) {
-                                        testDout( 3 ).then( function ( res ) {
-                                          testDout( 4 ).then( function ( res ) {
-                                            testDout( 5 ).then( function ( res ) {
-                                              testGeneratorVoltage( 0 ).then( function ( res ) {
-                                                testGeneratorVoltage( 1 ).then( function ( res ) {
-                                                  testGeneratorVoltage( 2 ).then( function ( res ) {
-                                                    testMainsVoltage( 0 ).then( function ( res ) {
-                                                      testMainsVoltage( 1 ).then( function ( res ) {
-                                                        testMainsVoltage( 2 ).then( function ( res ) {
-                                                          testCurrent( 0 ).then( function ( res ) {
-                                                            testCurrent( 1 ).then( function ( res ) {
-                                                              testCurrent( 2 ).then( function ( res ) {
-                                                                testFrequency( 0 ).then( function ( res ) {
-                                                                  testFrequency( 1 ).then( function ( res ) {
-                                                                    testSpeed().then( function ( res ) {
-                                                                      testLED( 0 ).then( function ( res ) {
-                                                                        testLED( 1 ).then( function ( res ) {
-                                                                          testLED( 2 ).then( function ( res ) {
-                                                                            testButtonDown( 0 ).then( function ( res ) {
-                                                                              testButtonDown( 1 ).then( function ( res ) {
-                                                                                testButtonDown( 2 ).then( function ( res ) {
-                                                                                  testButtonDown( 3 ).then( function ( res ) {
-                                                                                    testButtonDown( 4 ).then( function ( res ) {
-                                                                                      testEthernet().then( function ( res ) {
-                                                                                        testModbus().then( function ( res ) {
-                                                                                          testSecces = 0;
-                                                                                          list.forEach( function ( record ) {
-                                                                                            testSecces += record.res;
-                                                                                          });
-                                                                                          if ( testSecces == testLength ) {
-                                                                                            log.write( 'message', 'System test finished seccesful=)')
-                                                                                          } else {
-                                                                                            log.write( 'warning', ( 'System test finished with errors. There are ' + ( testLength - testSecces ) + ' unseccesful tests' ) );
-                                                                                          }
-                                                                                          resolve( list );
-                                                                                        }).catch( function () { reject(); });  
-                                                                                      }).catch( function () { reject(); });
-                                                                                    }).catch( function () { reject(); });    
-                                                                                  }).catch( function () { reject(); });    
-                                                                                }).catch( function () { reject(); });    
-                                                                              }).catch( function () { reject(); });    
-                                                                            }).catch( function () { reject(); });    
-                                                                          }).catch( function () { reject(); });    
-                                                                        }).catch( function () { reject(); });    
-                                                                      }).catch( function () { reject(); });    
-                                                                    }).catch( function () { reject(); });    
-                                                                  }).catch( function () { reject(); });    
-                                                                }).catch( function () { reject(); });    
-                                                              }).catch( function () { reject(); });    
-                                                            }).catch( function () { reject(); });    
-                                                          }).catch( function () { reject(); });    
-                                                        }).catch( function () { reject(); });
-                                                      }).catch( function () { reject(); });
-                                                    }).catch( function () { reject(); });
-                                                  }).catch( function () { reject(); });
-                                                }).catch( function () { reject(); });
-                                              }).catch( function () { reject(); });
-                                            }).catch( function () { reject(); });
-                                          }).catch( function () { reject(); });
-                                        }).catch( function () { reject(); });
-                                      }).catch( function () { reject(); });
-                                    }).catch( function () { reject(); });
-                                  }).catch( function () { reject(); });
-                                }).catch( function () { reject(); });
-                              }).catch( function () { reject(); });
-                            }).catch( function () { reject(); });
-                          }).catch( function () { reject(); });
-                        }).catch( function () { reject(); });
-                      }).catch( function () { reject(); });
-                    }).catch( function () { reject(); });
-                  }).catch( function () { reject(); });
-                }).catch( function () { reject(); });
-              }).catch( function () { reject(); });
-            }).catch( function () { reject(); });
-          }).catch( function () { reject(); });
-        }).catch( function () { reject(); });
-      }).catch( function () { reject(); });
-    }).catch( function () { reject(); });
-    */
   }); 
 }
 
 
 module.exports.systemTest = systemTest;
+module.exports.makeSerialRequest = makeSerialRequest;

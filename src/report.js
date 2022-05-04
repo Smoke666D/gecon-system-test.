@@ -51,17 +51,22 @@ function Report () {
         fs.appendFile( path, output, 'utf-8', function ( error ) {
           if ( error ) {
             log.write( 'error', 'Error on report writi  ng' );
+            reject();
           }
+          resolve();
         });
       });
     });
   }
   this.init = function ( inid, inversion ) {
-    id                 = inid;
-    version.bootloader = inversion.bootloader;
-    version.firmware   = inversion.firmware;
-    version.hardware   = inversion.hardware;
-    makeHeader();
+    return new Promise( function ( resolve ) {
+      id                 = inid;
+      version.bootloader = inversion.bootloader;
+      version.firmware   = inversion.firmware;
+      version.hardware   = inversion.hardware;
+      makeHeader();
+      resolve();
+    });
     return;
   }
   return;

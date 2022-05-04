@@ -12,6 +12,8 @@ const fs         = require( 'fs' );
 var   doutMap    = require( './modbus.js' ).doutMap;
 var   dinMap     = require( './modbus.js' ).dinMap;
 
+const makeSerialRequest = require( './sysTest.js' ).makeSerialRequest;
+
 var doutMap      = require( './modbus.js' ).doutMap;
 var dinMap       = require( './modbus.js' ).dinMap;
 var generatorMap = require( './modbus.js' ).generatorMap;
@@ -72,6 +74,7 @@ function error () {
   modbus.close().then( function () {
     serial.close().then( function () {
       log.write( 'error', 'Finish with error!' );
+      process.exit();
     });
   });
   return;
@@ -80,6 +83,7 @@ function finish () {
   modbus.close().then( function () {
     serial.close().then( function () {
       log.write( 'message', 'Finish!' );
+      process.exit();
     });
   });
   return;
@@ -101,12 +105,12 @@ function init () {
     });    
   });
 }
-function getDeviceData ( target, length, data = null ) {
+function getDeviceData ( target, length = 0, data = null ) {
   return new Promise( function ( resolve, reject ) {
     serial.write( makeSerialRequest( gecon.serial.command.get, target, data ) ).then( function () {
       serial.read().then( function ( data ) {
         if ( data.length >= length ) {
-          resolve( data );
+          resolve( data.substring( 0, data.indexOf( '\n' ) ) );
         } else {
           reject();
         }
@@ -149,7 +153,6 @@ function getData () {
             log.write( 'error', 'Error on bootloader version reading' );
             reject();
           });
-          resolve();
         }).catch( function () {
           log.write( 'error', 'Error on MAC address reading' );
           reject();
@@ -221,7 +224,6 @@ function writeMAC () {
     }).catch( function () { reject(); });
   });
 }
-
 function testModBus () {
   start().then( function() {
     modbusInit().then( function () {
@@ -245,29 +247,69 @@ function testModBus () {
   return;
 }
 
-function main () {
-  start().then( function () {
-    init().then( function () {
-      stlink.flash().then( function () {
-        delay( resetTimeout ).then( function () {
-          getData().then( function () {
-            report.init( id, version );
-            waitForTest().then( function () {
-              systemTest( assert ).then( function ( list ) {
-                report.write( list ).then( function () {
-                  writeMAC().then( function () {
-                    finish();
-                  }).catch( function () { error(); });
-                });
-              });
-            });
-          }).catch( function () { error(); });
-        }); 
-      }).catch( function () { error(); });
-    }).catch( function () { error(); });
-  });
+async function run ( test ) {
+  return await test();
+}
+
+async function test ( flash = false ) {
+  try {
+    await start();
+    await init();
+    if ( flash == true ) {
+      await stlink.flash();
+      await delay( resetTimeout );
+    }
+    await getData();
+    await report.init( id, version );
+    const list = await systemTest( assert );
+    await report.write( list );
+    finish();
+  } catch {
+    error();
+  }
   return;
 }
 
-//main();
-testModBus();
+function printHelp () {
+  console.log( 'gecon-system-test:' );
+  console.log( '   -h: help message ' );
+  console.log( '   -v: version of application' );
+  console.log( '   -m: modbus test' );
+  console.log( '   -f: run test with flash' );
+  process.exit();
+  return;
+}
+
+function printVersion () {
+  console.log( 'gecon-system-test ' );
+  process.exit();
+  return;
+}
+
+function argsAnaliz ( arg ) {
+  switch ( arg ) {
+    case '-h':
+      printHelp();
+      break;
+    case '-v':
+      printVersion();
+      break;  
+    case '-m':
+      testModBus();
+      break;
+    case '-f':
+      test( true );
+      break;
+    default:
+      test( false );
+      break;  
+  }
+  return;
+}
+
+async function main () {
+  argsAnaliz( process.argv[2] );
+  return;
+}
+
+main();
