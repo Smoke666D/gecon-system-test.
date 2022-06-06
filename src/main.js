@@ -9,6 +9,7 @@ const gecon      = require( './gecon.js' );
 const systemTest = require( './sysTest.js' ).systemTest;
 const reports    = require( './report.js');
 const fs         = require( 'fs' );
+const chalk      = require( 'chalk' ); 
 var   doutMap    = require( './modbus.js' ).doutMap;
 var   dinMap     = require( './modbus.js' ).dinMap;
 
@@ -355,23 +356,20 @@ async function test ( flash = false ) {
   }
   return;
 }
-
 function printHelp () {
-  console.log( 'gecon-system-test:' );
-  console.log( '   -h: help message ' );
-  console.log( '   -v: version of application' );
-  console.log( '   -m: modbus test' );
-  console.log( '   -f: run test with flash' );
+  console.log( chalk.cyan( 'gecon-system-test:' ) );
+  console.log( chalk.yellowBright( '   -h:' ) + chalk.cyan( ' help message ' ) );
+  console.log( chalk.yellowBright( '   -v:' ) + chalk.cyan( ' version of application' ) );
+  console.log( chalk.yellowBright( '   -m:' ) + chalk.cyan( ' modbus test' ) );
+  console.log( chalk.yellowBright( '   -f:' ) + chalk.cyan( ' run test with flash' ) );
   process.exit();
   return;
 }
-
 function printVersion () {
-  console.log( 'gecon-system-test version ' + process.env.npm_package_version );
+  console.log( chalk.cyan( 'gecon-system-test version ' ) + chalk.yellowBright( process.env.npm_package_version ) );
   process.exit();
   return;
 }
-
 function argsAnaliz ( arg ) {
   switch ( arg ) {
     case '-h':
@@ -392,10 +390,8 @@ function argsAnaliz ( arg ) {
   }
   return;
 }
-
 async function main () {
   argsAnaliz( process.argv[2] );
   return;
 }
-
 main();
