@@ -26,7 +26,9 @@ const serial = {
     'sw'        : 'sw',      // yes
     'led'       : 'led',     // yes
     'storage'   : 'storage', // yes
-    'id'        : 'id',
+    'unique'    : 'unique',
+    'released'  : 'released',
+    'serial'    : 'serial',
     'ip'        : 'ip,',
     'mac'       : 'mac',
     'version'   : 'version'

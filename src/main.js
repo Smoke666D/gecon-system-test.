@@ -33,11 +33,13 @@ let id  = '';
 let ip  = '';
 let mac = '';
 let num = 0;
+let dat = '';
 
-const setupSerialFile = 'serial.txt';
-const setupModbusFile = 'modbus.txt';
-const macAddressFile  = 'mac.txt';
-const serialNumberFile = "serialNumber.txt";
+const setupSerialFile  = 'serial.txt';
+const setupModbusFile  = 'modbus.txt';
+const macAddressFile   = 'mac.txt';
+const serialNumberFile = 'serialNumber.txt';
+const serialListFile   = 'serialList.txt';
 
 const serialSpeed  = 115200;
 const modbusSpeed  = 115200;
@@ -80,35 +82,50 @@ function serialNumberInit() {
     }    
   });
 }
-
 function writeSerialNumber () {
   return new Promise( function ( resolve, reject ) {
     let date   = new Date();
     let strNum = num;
+    let out    = "";  
     if ( num < 9999 ) {
       strNum = ( '0000' + num ).slice( -2 );
     }
-    let out = date.getYear().toString().slice(-2) + 
-              ( '00' + date.getMonth() ).slice( -2 ) +
-              ( '00' + date.getDate() ).slice( -2 ) +
-              '.' + strNum;
+    dat = date.getYear().toString().slice(-2) + ( '00' + date.getMonth() ).slice( -2 ) + ( '00' + date.getDate() ).slice( -2 );
+    out = gecon.serial.command.set + gecon.serial.target.serial + strNum;
     serial.write( out ).then( function () {
-      fs.writeFile( serialNumberFile, out, function ( error ) {
-        if ( error ) {
-          log.write( 'error', 'Error on serial umber writing to the file' );
-          reject();
-        } else {
-          log.write( 'message', ( "Serial number was wrote: " + out ) );
-          resolve();
-        }
+      out = gecon.serial.command.set + gecon.serial.target.released + dat;            
+      serial.write( out ).then( function () {
+        fs.writeFile( serialNumberFile, out, function ( error ) {
+          if ( error ) {
+            log.write( 'error', 'Error on serial umber writing to the file' );
+            reject();
+          } else {
+            log.write( 'message', ( "Serial number was wrote: " + out ) );
+            resolve();
+          }
+        });
+      }).catch( function () {
+        log.write( 'error', 'Error on serial number writing to the device' );
+        reject();
       });
     }).catch( function () {
-      log.write( 'error', 'Error on serial umber writing to the device' );
+      log.write( 'error', 'Error on release date writing to the device' );
       reject();
     });
   });
 }
-
+function logSerialNumbers () {
+  return new Promise( function ( resolve, reject ) {
+    fs.appendFile( serialListFile, ( dat + ' ' + num + ' ' + id + ' ' + mac + '\n' ), function ( error ) {
+      if ( error ) {
+        log.write( 'error', 'Error on writing to the serial list file' );
+        reject();
+      } else {
+        resolve();
+      }
+    });
+  });
+}
 function modbusInit () {
   return new Promise( function ( resolve, reject ) {
     envir.init( setupModbusFile, 'modbus' ).then( function ( path ) {
@@ -193,7 +210,7 @@ function getDeviceData ( target, length = 0, data = null ) {
 }
 function getData () {
   return new Promise ( function ( resolve, reject ) {
-    getDeviceData( gecon.serial.target.id, 10 ).then( function ( data ) {
+    getDeviceData( gecon.serial.target.unique, 10 ).then( function ( data ) {
       id = data;
       log.write( 'message', ( 'ID: ' + id ) );
       getDeviceData( gecon.serial.target.ip, 10 ).then( function ( data ) {
@@ -331,6 +348,7 @@ async function test ( flash = false ) {
     const list = await systemTest( assert );
     await report.write( list );
     await writeSerialNumber();
+    await logSerialNumbers();
     finish();
   } catch {
     error();
