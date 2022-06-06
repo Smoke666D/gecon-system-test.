@@ -32,15 +32,82 @@ let report  = new reports.Report();
 let id  = '';
 let ip  = '';
 let mac = '';
+let num = 0;
 
 const setupSerialFile = 'serial.txt';
 const setupModbusFile = 'modbus.txt';
 const macAddressFile  = 'mac.txt';
+const serialNumberFile = "serialNumber.txt";
 
 const serialSpeed  = 115200;
 const modbusSpeed  = 115200;
 const resetTimeout = 10000;  /* ms */
 const macBase      = 0x320000000000;
+
+function serialNumberInit() {
+  return new Promise( function ( resolve, reject ) {
+    if ( fs.existsSync( serialNumberFile ) ) {
+      fs.readFile( serialNumberFile, 'utf8', function ( error, data ) {
+        if ( error ) {
+          log.write( 'error', 'Error on reading serial number storage file' );
+          reject();
+        } else {
+          if ( data.indexOf( '\n' ) == -1 ) {
+            num = parseInt( data );
+            if ( isNaN( num ) ) {
+              log.write( 'error', 'Error on number reading from serial number file' );
+              reject();    
+            } else {
+              num++;
+              log.write( 'message', ( "Serial number: " + num ) );
+              resolve();
+            }
+          }
+        }
+      });
+    } else {
+      num = 1;
+      fs.writeFile( serialNumberFile, num.toString(), function ( error ) {
+        if ( error ) {
+          log.write( 'error', 'Error on writing serial number storage file' );
+          reject();
+        } else {
+          log.write( 'message', "There wasn't serial number storage file. New file has been creating." );
+          log.write( 'message', ( "Serial number: " + num ) );
+          resolve();
+        }
+      });
+    }    
+  });
+}
+
+function writeSerialNumber () {
+  return new Promise( function ( resolve, reject ) {
+    let date   = new Date();
+    let strNum = num;
+    if ( num < 9999 ) {
+      strNum = ( '0000' + num ).slice( -2 );
+    }
+    let out = date.getYear().toString().slice(-2) + 
+              ( '00' + date.getMonth() ).slice( -2 ) +
+              ( '00' + date.getDate() ).slice( -2 ) +
+              '.' + strNum;
+    serial.write( out ).then( function () {
+      fs.writeFile( serialNumberFile, out, function ( error ) {
+        if ( error ) {
+          log.write( 'error', 'Error on serial umber writing to the file' );
+          reject();
+        } else {
+          log.write( 'message', ( "Serial number was wrote: " + out ) );
+          resolve();
+        }
+      });
+    }).catch( function () {
+      log.write( 'error', 'Error on serial umber writing to the device' );
+      reject();
+    });
+  });
+}
 
 function modbusInit () {
   return new Promise( function ( resolve, reject ) {
@@ -90,10 +157,14 @@ function finish () {
 }
 function init () {
   return new Promise( function ( resolve, reject ) {
-    stlink.check().then( function () {
-      serialInit().then( function () {
-        modbusInit().then( function () {
-          resolve();
+    serialNumberInit().then( function () {
+      stlink.check().then( function () {
+        serialInit().then( function () {
+          modbusInit().then( function () {
+            resolve();
+          }).catch( function () {
+            reject();
+          });
         }).catch( function () {
           reject();
         });
@@ -102,7 +173,7 @@ function init () {
       });
     }).catch( function () {
       reject();
-    });    
+    });
   });
 }
 function getDeviceData ( target, length = 0, data = null ) {
@@ -259,6 +330,7 @@ async function test ( flash = false ) {
     await report.init( id, version );
     const list = await systemTest( assert );
     await report.write( list );
+    await writeSerialNumber();
     finish();
   } catch {
     error();
