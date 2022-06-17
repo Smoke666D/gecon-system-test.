@@ -87,25 +87,6 @@ function Assert ( serial, modbus ) {
       });
     });
   }
-  this.compare = function ( dio, request, min, max, timeout, name ) {
-    return new Promise ( function ( resolve, reject ) {
-      isModbusSet( dio ).then( function () {
-        delay( timeout ).then( function () {
-          serial.write( request ).then( function() {
-            serial.read().then( function ( data ) {
-              data = parseInt( data );
-              if ( ( data >= min ) && ( data <= max ) ) {
-                log.write( 'message', ( name + ' - Ok' ) );
-              } else {
-                log.write( 'warning', ( name + ' - Fail: await between ' + min + ' and ' + max + ' ,fact ' + data ) );
-              }
-              resolve( data );
-            }).catch( function () { reject(); });
-          });
-        });
-      }).catch( function () { reject(); }); 
-    });
-  }
   this.read    = function ( dio, request, expected, timeout, name ) {
     return new Promise ( function ( resolve, reject ) {
       modbus.getOvenByID( dio.id ).then( function ( oven ) {
@@ -116,6 +97,29 @@ function Assert ( serial, modbus ) {
             }).catch( function () {
               reject();
             });  
+          });  
+        }).catch( function () {
+          reject();
+        });
+      });
+    });
+  }
+  this.compare = function ( dio, request, min, max, timeout, name ) {
+    return new Promise ( function ( resolve, reject ) {
+      modbus.getOvenByID( dio.id ).then( function ( oven ) {
+        oven.set( dio.bit, dio.state ).then( function () {
+          delay( timeout ).then( function () {
+            serial.write( request ).then( function() {
+              serial.read().then( function ( data ) {
+                data = parseInt( data );
+                if ( ( data >= min ) && ( data <= max ) ) {
+                  log.write( 'message', ( name + ' - Ok' ) );
+                } else {
+                  log.write( 'warning', ( name + ' - Fail: await between ' + min + ' and ' + max + ' ,fact ' + data ) );
+                }
+                resolve( data );
+              }).catch( function () { reject(); });
+            });
           });  
         }).catch( function () {
           reject();

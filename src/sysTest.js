@@ -1,10 +1,14 @@
 #!/usr/bin/env node
-const log      = require( './log.js' ); 
-const ethernet = require( './ethernet.js' );
-const gecon    = require( './gecon.js' );
-const USB      = require( './usb.js' ).USB;
-const doutMap  = require( './modbus.js' ).doutMap;
-const dinMap   = require( './modbus.js' ).dinMap;
+const log          = require( './log.js' ); 
+const ethernet     = require( './ethernet.js' );
+const gecon        = require( './gecon.js' );
+const USB          = require( './usb.js' ).USB;
+const doutMap      = require( './modbus.js' ).doutMap;
+const dinMap       = require( './modbus.js' ).dinMap;
+const generatorMap = require( './modbus.js' ).generatorMap;
+const currentMap   = require( './modbus.js' ).currentMap;
+const mainsMap     = require( './modbus.js' ).mainsMap;
+const speedMap     = require( './modbus.js' ).speedMap;
 
 function Record ( name, res ) {
   this.name = name;
@@ -28,9 +32,9 @@ function systemTest ( assert ) {
 
     function testStorage () {
       return new Promise( function ( resolve, reject ) {
-        assert.serial( makeSerialRequest( gecon.serial.command.get, gecon.serial.target.storage ), 
-                       gecon.serial.status.ok, 
-                       'Storage' ).then( function ( res ) {
+        let request  = makeSerialRequest( gecon.serial.command.get, gecon.serial.target.storage )
+        let expected = gecon.serial.status.ok;
+        assert.serial( request, expected, 'Storage' ).then( function ( res ) {
           list.push( new Record( 'Storage', res ) );
           resolve( res );
         }).catch( function () {
@@ -52,12 +56,10 @@ function systemTest ( assert ) {
     }
     function testFuel () {
       return new Promise( function ( resolve, reject ) {
-        assert.compare( null, 
-                        makeSerialRequest( gecon.serial.command.get, gecon.serial.target.fuel ), 
-                        gecon.normal.fuel.min, 
-                        gecon.normal.fuel.max, 
-                        0, 
-                        'Fuel sensor' ).then( function ( res ) {
+        let request = makeSerialRequest( gecon.serial.command.get, gecon.serial.target.fuel );
+        let min     = gecon.normal.fuel.min;
+        let max     = gecon.normal.fuel.max;
+        assert.compare( null, request, min, max, 0, 'Fuel sensor' ).then( function ( res ) {
           list.push( new Record( 'Fuel sensor', res ) );
           resolve( res );
         }).catch( function () {
@@ -67,12 +69,10 @@ function systemTest ( assert ) {
     }
     function testCoolant () {
       return new Promise( function ( resolve, reject ) {
-        assert.compare( null, 
-                        makeSerialRequest( gecon.serial.command.get, gecon.serial.target.coolant ), 
-                        gecon.normal.coolant.min, 
-                        gecon.normal.coolant.max, 
-                        0, 
-                        'Coolant sensor' ).then( function ( res ) {
+        let request = makeSerialRequest( gecon.serial.command.get, gecon.serial.target.coolant );
+        let min     = gecon.normal.coolant.min;
+        let max     = gecon.normal.coolant.max;
+        assert.compare( null, request, min, max, 0, 'Coolant sensor' ).then( function ( res ) {
           list.push( new Record( 'Coolant sensor', res ) );
           resolve( res );
         }).catch( function () {
@@ -82,12 +82,10 @@ function systemTest ( assert ) {
     }
     function testOil () {
       return new Promise( function ( resolve, reject ) {
-        assert.compare( null, 
-                        makeSerialRequest( gecon.serial.command.get, gecon.serial.target.oil ), 
-                        gecon.normal.oil.min, 
-                        gecon.normal.oil.max, 
-                        0, 
-                        'Oil sensor' ).then( function ( res ) {
+        let request = makeSerialRequest( gecon.serial.command.get, gecon.serial.target.oil );
+        let min     = gecon.normal.oil.min;
+        let max     = gecon.normal.oil.max;
+        assert.compare( null, request, min, max, 0, 'Oil sensor' ).then( function ( res ) {
           list.push( new Record( 'Oil sensor', res ) );
           resolve( res );
         }).catch( function () {
@@ -97,12 +95,10 @@ function systemTest ( assert ) {
     }
     function testCharger () {
       return new Promise( function ( resolve, reject ) {
-        assert.compare( null, 
-                        makeSerialRequest( gecon.serial.command.get, gecon.serial.target.charger ), 
-                        gecon.normal.charger.min, 
-                        gecon.normal.charger.max, 
-                        0, 
-                        'Charger' ).then( function ( res ) {
+        let request = makeSerialRequest( gecon.serial.command.get, gecon.serial.target.charger );
+        let min     = gecon.normal.charger.min;
+        let max     = gecon.normal.charger.max;
+        assert.compare( null, request, min, max, 0, 'Charger' ).then( function ( res ) {
           list.push( new Record( 'Charger', res ) );
           resolve( res );
         }).catch( function () {
@@ -153,21 +149,16 @@ function systemTest ( assert ) {
     function testGeneratorVoltage ( n ) {
       return new Promise( function ( resolve, reject ) {
         generatorMap[n].state = true;
-        let result = 0;
-        assert.compare( generatorMap[n],
-                        makeSerialRequest( gecon.serial.command.get, gecon.serial.target.generator, n ),
-                        gecon.normal.generator.min,
-                        gecon.normal.generator.max,
-                        gecon.normal.generator.timeout,
-                        ( 'Generator on ' + n ) ).then( function ( res ) {
+        let result  = 0;
+        let request = makeSerialRequest( gecon.serial.command.get, gecon.serial.target.generator, n );
+        let min     = gecon.normal.generator.min;
+        let max     = gecon.normal.generator.max;
+        let timeout = gecon.normal.generator.timeout;
+        assert.compare( generatorMap[n], request, min, max, timeout, ( 'Generator on ' + n ) ).then( function ( res ) {
           result += res;
           list.push( new Record( ( 'Generator on ' + n ), res ) );
           generatorMap[n].state = false;
-          assert.read( generatorMap[n],
-                      makeSerialRequest( gecon.serial.command.get, gecon.serial.target.generator, n ),
-                      0,
-                      gecon.normal.generator.timeout,
-                      ( 'Generator off ' + n ) ).then( function ( res ) {
+          assert.read( generatorMap[n], request, 0, timeout, ( 'Generator off ' + n ) ).then( function ( res ) {
             list.push( new Record( ( 'Generator off ' + n ), res ) );
             resolve( result + res );
           }).catch( function () { reject() });
@@ -177,49 +168,39 @@ function systemTest ( assert ) {
     function testMainsVoltage ( n ) {
       return new Promise( function ( resolve, reject ) {
         mainsMap[n].state = true;
-        let result = 0;
-        assert.compare( mainsMap[n],
-                        makeSerialRequest( gecon.serial.command.get, gecon.serial.target.mains, n ),
-                        gecon.normal.mains.min,
-                        gecon.normal.mains.max,
-                        gecon.normal.mains.timeout,
-                        ( 'Mains on ' + n ) ).then( function ( res ) {
+        let result  = 0;
+        let request = makeSerialRequest( gecon.serial.command.get, gecon.serial.target.mains, n );
+        let min     = gecon.normal.mains.min;
+        let max     = gecon.normal.mains.max;
+        let timeout = gecon.normal.mains.timeout;
+        assert.compare( mainsMap[n], request, min, max, timeout, ( 'Mains on ' + n ) ).then( function ( res ) {
           result += res;
           list.push( new Record( ( 'Mains on ' + n ), res ) );
           mainsMap[n].state = false;
-          assert.read( mainsMap[n],
-                      makeSerialRequest( gecon.serial.command.get, gecon.serial.target.mains, n ),
-                      0,
-                      gecon.normal.mains.timeout,
-                      ( 'Mains off ' + n ) ).then( function ( res ) {
+          assert.read( mainsMap[n], request, 0, timeout, ( 'Mains off ' + n ) ).then( function ( res ) {
             list.push( new Record( ( 'Mains off ' + n ), res ) );
             resolve( result + res );
-          }).catch( function () { reject() });
-        }).catch( function () { reject() });
+          }).catch( function () { reject(); });
+        }).catch( function () { reject(); });
       });
     }
     function testCurrent ( n ) {
       return new Promise( function ( resolve, reject ) {
         currentMap[n].state = true;
-        let result = 0;
-        assert.compare( currentMap[n],
-                        makeSerialRequest( gecon.serial.command.get, gecon.serial.target.current, n ),
-                        gecon.normal.current.min,
-                        gecon.normal.current.max,
-                        gecon.normal.current.timeout,
-                        ( 'Current on ' + n ) ).then( function ( res ) {
+        let result  = 0;
+        let request = makeSerialRequest( gecon.serial.command.get, gecon.serial.target.current, n );
+        let min     = gecon.normal.current.min;
+        let max     = gecon.normal.current.max;
+        let timeout = gecon.normal.current.timeout;
+        assert.compare( currentMap[n], request, min, max, timeout, ( 'Current on ' + n ) ).then( function ( res ) {
           result += res;
           list.push( new Record( ( 'Current on ' + n ), res ) );
           currentMap[n].state = false;
-          assert.read( currentMap[n],
-                      makeSerialRequest( gecon.serial.command.get, gecon.serial.target.current, n ),
-                      0,
-                      gecon.normal.current.timeout,
-                      ( 'Current off ' + n ) ).then( function ( res ) {
+          assert.read( currentMap[n], request, 0, timeout, ( 'Current off ' + n ) ).then( function ( res ) {
             list.push( new Record( ( 'Current off ' + n ), res ) );
             resolve( result + res );
-          }).catch( function () { reject() });
-        }).catch( function () { reject() });
+          }).catch( function () { reject(); });
+        }).catch( function () { reject(); });
       });
     }
     function testFrequency ( n ) {
@@ -230,44 +211,34 @@ function systemTest ( assert ) {
           dio    = mainsMap[0];
           string = 'mains';
         }
-        dio.state = true;
-        let result = 0;
-        assert.compare( dio,
-                        makeSerialRequest( gecon.serial.command.get, gecon.serial.target.frequency, n ),
-                        gecon.normal.frequency.min,
-                        gecon.normal.frequency.max,
-                        gecon.normal.frequency.timeout,
-                        ( 'frequency ' + string + 'on' ) ).then( function ( res ) {
+        dio.state   = true;
+        let result  = 0;
+        let request = makeSerialRequest( gecon.serial.command.get, gecon.serial.target.frequency, n );
+        let min     = gecon.normal.frequency.min;
+        let max     = gecon.normal.frequency.max;
+        let timeout = gecon.normal.frequency.timeout;
+        assert.compare( dio, request, min, max, timeout, ( 'frequency ' + string + 'on' ) ).then( function ( res ) {
           list.push( new Record( ( 'frequency ' + string + 'on' ), res ) );
           result += res;
           dio.state = false;
-          assert.read( dio,
-                      makeSerialRequest( gecon.serial.command.get, gecon.serial.target.frequency, n ),
-                      0,
-                      gecon.normal.frequency.timeout,
-                      ( 'frequency ' + string + 'off' ) ).then( function ( res ) {
+          assert.read( dio, request, 0, timeout, ( 'frequency ' + string + 'off' ) ).then( function ( res ) {
             list.push( new Record( ( 'frequency ' + string + 'off' ), res ) );
             resolve( result + res );
-          }).catch( function () { reject() });
-        }).catch( function () { reject() });
+          }).catch( function () { reject(); });
+        }).catch( function () { reject(); });
       });
     }
     function testSpeed () {
       return new Promise( function ( resolve, reject ) {
         let result = 0;
-        assert.compare( speedMap[0],
-                        makeSerialRequest( gecon.serial.command.get, gecon.serial.target.speed ),
-                        gecon.normal.speed.min,
-                        gecon.normal.speed.max,
-                        gecon.normal.speed.timeout,
-                        'Speed  hight' ).then( function ( res ) {
+        let request = makeSerialRequest( gecon.serial.command.get, gecon.serial.target.speed );
+        let min     = gecon.normal.speed.min;
+        let max     = gecon.normal.speed.max;
+        let timeout = gecon.normal.speed.timeout;
+        assert.compare( speedMap[0], request, min, max, timeout, 'Speed  hight' ).then( function ( res ) {
           list.push( new Record( 'Speed  hight', res ) );
           result += res;
-          assert.write( speedMap[0],
-                        makeSerialRequest( gecon.serial.command.get, gecon.serial.target.speed ),
-                        0,
-                        gecon.normal.speed.timeout,
-                        'Speed low' ).then( function ( res ) {
+          assert.write( speedMap[0], request, 0, timeout, 'Speed low' ).then( function ( res ) {
             list.push( new Record( 'Speed  low', res ) );
             resolve( result + res );
           }).catch( function () { reject() });
@@ -291,9 +262,9 @@ function systemTest ( assert ) {
     }
     async function testButtonUp ( n ) {
       return new Promise( function ( resolve, reject ) {
-        assert.serial( makeSerialRequest( gecon.serial.command.get, gecon.serial.target.sw, n ), 
-                       gecon.serial.state.off,
-                       ( "Switch button up " + n ) ).then( function ( res ) {
+        let request  = makeSerialRequest( gecon.serial.command.get, gecon.serial.target.sw, n );
+        let expected = gecon.serial.state.off;
+        assert.serial( request, expected, ( "Switch button up " + n ) ).then( function ( res ) {
           list.push( new Record( ( "Switch button up " + n ), res ) );
           resolve( res );
         }).catch( function () { reject() });
@@ -302,11 +273,21 @@ function systemTest ( assert ) {
     function testButtonDown ( n ) {
       return new Promise( function ( resolve, reject ) {
         let request  = makeSerialRequest( gecon.serial.command.get, gecon.serial.target.sw, n )
-        let expected = gecon.serial.state.on; 
+        let expected = gecon.serial.state.on;
         let delay    = gecon.normal.sw.delay;
         let timeout  = gecon.normal.sw.timeout;  
         assert.event( request, expected, delay, timeout,( "Switch button down " + n ) ).then( function ( res ) {
           list.push( new Record( ( "Switch button down " + n ), res ) );
+          resolve( res );
+        }).catch( function () { reject() });
+      });
+    }
+    function testSD () {
+      return new Promise( function ( resolve, reject ) {
+        let request  = makeSerialRequest( gecon.serial.command.get, gecon.serial.target.sd );
+        let expected = gecon.serial.state.on;
+        assert.serial( request, expected, "SD card" ).then( function ( res ) {
+          list.push( new Record( "SD card", res ) );
           resolve( res );
         }).catch( function () { reject() });
       });
@@ -378,14 +359,15 @@ function systemTest ( assert ) {
           log.write( 'warning', ( 'System test finished with errors. There are ' + ( testLength - testSecces ) + ' unseccesful tests' ) );
           resolve( false );
         }
-        
       });
     }
     async function run () {
       list = [];
       let res = false;
       try {
-        //await testTime();
+        await testSD();
+        /*
+        await testTime();
         await testUSB();
         await testButtonUp( 0 );
         await testButtonUp( 1 );
@@ -407,9 +389,6 @@ function systemTest ( assert ) {
         await testDout( 3 );
         await testDout( 4 );
         await testDout( 5 );
-        
-        await testModbus(); // Error on device side 
-        /*
         await testGeneratorVoltage( 0 );
         await testGeneratorVoltage( 1 );
         await testGeneratorVoltage( 2 );
@@ -423,8 +402,7 @@ function systemTest ( assert ) {
         await testFrequency( 1 );
         await testSpeed();
         await testEthernet();
-        */
-        /*
+        await testModbus();
         await testButtonDown( 0 );
         await testButtonDown( 1 );
         await testButtonDown( 2 );

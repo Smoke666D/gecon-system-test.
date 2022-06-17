@@ -33,12 +33,12 @@ var generatorMap = [
   new MbDIO( ovenID[0], 1 ),
   new MbDIO( ovenID[0], 2 ),
 ];
-var currentMap = [
+var mainsMap = [
   new MbDIO( ovenID[0], 3 ),
   new MbDIO( ovenID[0], 4 ),
   new MbDIO( ovenID[0], 5 ),
 ];
-var mainsMap = [
+var currentMap = [
   new MbDIO( ovenID[0], 8 ),
   new MbDIO( ovenID[0], 9 ),
   new MbDIO( ovenID[0], 10 ),

@@ -31,7 +31,10 @@ const serial = {
     'serial'    : 'serial',
     'ip'        : 'ip,',
     'mac'       : 'mac',
-    'version'   : 'version'
+    'version'   : 'version',
+    'adr'       : 'adr',
+    'baudrate'  : 'baudrate',
+    'sd'        : 'sd'
   },
   'versions' : {
     'bootloader' : 0,
@@ -86,17 +89,17 @@ const normal = {
     'off' : 100     /* ms */
   },
   'generator' : {
-    'timeout' : 250, /* ms */
+    'timeout' : 1250, /* ms */
     'min' : 210,
     'max' : 230
   },
   'mains' : {
-    'timeout' : 250, /* ms */
+    'timeout' : 1250, /* ms */
     'min' : 210,
     'max' : 230
   },
   'current' : {
-    'timeout' : 250, /* ms */
+    'timeout' : 1250, /* ms */
     'min' : 10,
     'max' : 20
   },
