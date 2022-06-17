@@ -47,7 +47,7 @@ const modbusSpeed  = 115200;
 const resetTimeout = 10000;  /* ms */
 const macBase      = 0x320000000000;
 
-function serialNumberInit() {
+function serialNumberInit () {
   return new Promise( function ( resolve, reject ) {
     if ( fs.existsSync( serialNumberFile ) ) {
       fs.readFile( serialNumberFile, 'utf8', function ( error, data ) {
@@ -88,27 +88,47 @@ function writeSerialNumber () {
     let date   = new Date();
     let strNum = num;
     let out    = "";  
+    log.write( 'message', 'Start the process of serial and release date writing. It will take about 10 sec' );
     if ( num < 9999 ) {
       strNum = ( '0000' + num ).slice( -2 );
     }
-    dat = date.getYear().toString().slice(-2) + ( '00' + date.getMonth() ).slice( -2 ) + ( '00' + date.getDate() ).slice( -2 );
-    out = gecon.serial.command.set + gecon.serial.target.serial + strNum;
+    dat = date.getYear().toString().slice(-2) + gecon.serial.separator + 
+          ( '00' + date.getMonth() ).slice( -2 ) + gecon.serial.separator + 
+          ( '00' + date.getDate() ).slice( -2 );
+    out = gecon.serial.command.set + gecon.serial.separator + gecon.serial.target.serial + gecon.serial.separator + strNum + gecon.serial.postfix;
     serial.write( out ).then( function () {
-      out = gecon.serial.command.set + gecon.serial.target.released + dat;            
-      serial.write( out ).then( function () {
-        fs.writeFile( serialNumberFile, out, function ( error ) {
-          if ( error ) {
-            log.write( 'error', 'Error on serial umber writing to the file' );
+      out = gecon.serial.command.set + gecon.serial.separator + gecon.serial.target.released + gecon.serial.separator + dat + gecon.serial.postfix;            
+      serial.read().then( function ( data ) {
+        if ( data == 'Ok' ) {
+          log.write( 'message', 'Serial number have been writen to the device memory' );
+          serial.write( out ).then( function () {
+            serial.read().then( function ( data ) {
+              if ( data == 'Ok' )
+              {
+                log.write( 'message', 'Release date have been writen to the device memory' );
+                fs.writeFile( serialNumberFile, strNum, function ( error ) {
+                  if ( error ) {
+                    log.write( 'error', 'Error on serial umber writing to the file' );
+                    reject();
+                  } else {
+                    log.write( 'message', ( "Serial number was wrote: " + dat.replace( ' ', '' ).replace( ' ', '' ) + strNum  ) );
+                    resolve();
+                  }
+                });
+              } else {
+                log.write( 'error', 'Error on release date writing to the memory of the device' );
+                reject();      
+              }
+            }).catch( function () { reject(); });;
+          }).catch( function () {
+            log.write( 'error', 'Error on serial number writing to the device' );
             reject();
-          } else {
-            log.write( 'message', ( "Serial number was wrote: " + out ) );
-            resolve();
-          }
-        });
-      }).catch( function () {
-        log.write( 'error', 'Error on serial number writing to the device' );
-        reject();
-      });
+          });
+        } else {
+          log.write( 'error', 'Error on serial number writing to the memory of the device' );
+          reject();
+        }
+      }).catch( function () { reject(); });
     }).catch( function () {
       log.write( 'error', 'Error on release date writing to the device' );
       reject();
@@ -117,7 +137,7 @@ function writeSerialNumber () {
 }
 function logSerialNumbers () {
   return new Promise( function ( resolve, reject ) {
-    fs.appendFile( serialListFile, ( dat + ' ' + num + ' ' + id + ' ' + mac + '\n' ), function ( error ) {
+    fs.appendFile( serialListFile, ( '[ ] ' + dat + ' ' + num + '  ' + id + ' ' + mac + '\n' ), function ( error ) {
       if ( error ) {
         log.write( 'error', 'Error on writing to the serial list file' );
         reject();
@@ -173,16 +193,20 @@ function finish () {
   });
   return;
 }
-function init () {
+function init ( flash ) {
   return new Promise( function ( resolve, reject ) {
     serialNumberInit().then( function () {
-      stlink.check().then( function () {
+      modbusInit().then( function () {
         serialInit().then( function () {
-          modbusInit().then( function () {
+          if ( flash == true ) {
+            stlink.check().then( function () {
+              resolve();
+            }).catch( function () {
+              reject();
+            });
+          } else {
             resolve();
-          }).catch( function () {
-            reject();
-          });
+          }
         }).catch( function () {
           reject();
         });
@@ -199,7 +223,7 @@ function getDeviceData ( target, length = 0, data = null ) {
     serial.write( makeSerialRequest( gecon.serial.command.get, target, data ) ).then( function () {
       serial.read().then( function ( data ) {
         if ( data.length >= length ) {
-          resolve( data.substring( 0, data.indexOf( '\n' ) ) );
+          resolve( data );
         } else {
           reject();
         }
@@ -213,10 +237,10 @@ function getData () {
   return new Promise ( function ( resolve, reject ) {
     getDeviceData( gecon.serial.target.unique, 10 ).then( function ( data ) {
       id = data;
-      log.write( 'message', ( 'ID: ' + id ) );
+      log.write( 'message', ( 'ID : ' + id ) );
       getDeviceData( gecon.serial.target.ip, 10 ).then( function ( data ) {
         ip = data;
-        log.write( 'message', ( 'IP: ' + ip ) );
+        log.write( 'message', ( 'IP : ' + ip ) );
         getDeviceData( gecon.serial.target.mac, 12 ).then( function ( data ) {
           mac = data;
           log.write( 'message', ( 'MAC: ' + mac ) );
@@ -256,9 +280,11 @@ function getData () {
     });
   });
 }
-function delay ( timeout ) {
+function delay ( timeout, text = '' ) {
   return new Promise ( function ( resolve ) {
-    log.write( 'message', ( 'Waiting ' + timeout + ' ms for restart controller' ) );
+    if ( text.length > 0 ) {
+      log.write( 'message', ( 'Waiting ' + timeout + ' ms ' + text ) );
+    }
     setTimeout( function () {
       resolve();
     }, timeout );
@@ -303,7 +329,7 @@ function writeMAC () {
           if ( response == gecon.serial.status.ok ) {
             log.wtite( 'message', 'MAC address has been written. The changes will take effect after reset.' );
             stlink.reset().then( function () {
-              delay( resetTimeout ).then( function () {
+              delay( resetTimeout, 'for restart controller' ).then( function () {
                 resolve();
               });
             });
@@ -339,17 +365,20 @@ function testModBus () {
 async function test ( flash = false ) {
   try {
     await start();
-    await init();
+    await init( flash );
     if ( flash == true ) {
       await stlink.flash();
-      await delay( resetTimeout );
+      await delay( resetTimeout, 'for restart controller' );
     }
     await getData();
     await report.init( id, version );
-    const list = await systemTest( assert );
-    await report.write( list );
-    await writeSerialNumber();
-    await logSerialNumbers();
+    const result = await systemTest( assert );
+    await report.write( result[0] );
+    if ( result[1] == true )
+    {
+      await writeSerialNumber();
+      await logSerialNumbers();
+    }
     finish();
   } catch {
     error();
@@ -362,6 +391,7 @@ function printHelp () {
   console.log( chalk.yellowBright( '   -v:' ) + chalk.cyan( ' version of application' ) );
   console.log( chalk.yellowBright( '   -m:' ) + chalk.cyan( ' modbus test' ) );
   console.log( chalk.yellowBright( '   -f:' ) + chalk.cyan( ' run test with flash' ) );
+  //console.log( chalk.yellowBright( '   -p:' ) + chalk.cyan( ' load DOUT' ) );
   process.exit();
   return;
 }
@@ -370,7 +400,7 @@ function printVersion () {
   process.exit();
   return;
 }
-function argsAnaliz ( arg ) {
+function argsAnaliz ( arg, data ) {
   switch ( arg ) {
     case '-h':
       printHelp();
@@ -391,7 +421,7 @@ function argsAnaliz ( arg ) {
   return;
 }
 async function main () {
-  argsAnaliz( process.argv[2] );
+  argsAnaliz( process.argv[2], process.argv[3] );
   return;
 }
 main();

@@ -49,7 +49,7 @@ const serial = {
     'errorData'      : 'Wrong data',
     'errorExecuting' : 'Executing error',
     'errorUnknown'   : 'Unknown error'
-  },
+  }
 };
 const normal = {
   'time' : {
@@ -58,61 +58,61 @@ const normal = {
     'timeout'  : 3000
   },
   'battery' : {
-    'min' : 22,
-    'max' : 24,
+    'min' : 22, /* V */
+    'max' : 25, /* V */
   },
   'oil' : {
-    'min' : 0,
-    'max' : 5
+    'min' : 0, /* Bar */
+    'max' : 20 /* Bar */
   },
   'coolant' : {
-    'min' : 0,
-    'max' : 260
+    'min' : 0,   /* 'C */
+    'max' : 260 /* 'C */
   },
   'fuel' : {
-    'min' : 0,
-    'max' : 120
+    'min' : 0,   /* % */
+    'max' : 120  /* % */
   },
   'charger' : {
-    'min' : 0,
-    'max' : 5
+    'min' : 0, /* V */
+    'max' : 5  /* V */
   },
   'dinTimeout' : {
-    'on'  : 100,
-    'off' : 100
+    'on'  : 250, /* ms */
+    'off' : 250  /* ms */
   },
   'doutTimeout' : {
-    'on'  : 100,
-    'off' : 100
+    'on'  : 300,   /* ms, Heartinig timeout */
+    'off' : 100     /* ms */
   },
   'generator' : {
-    'timeout' : 10,
+    'timeout' : 250, /* ms */
     'min' : 210,
     'max' : 230
   },
   'mains' : {
-    'timeout' : 10,
+    'timeout' : 250, /* ms */
     'min' : 210,
     'max' : 230
   },
   'current' : {
-    'timeout' : 10,
+    'timeout' : 250, /* ms */
     'min' : 10,
     'max' : 20
   },
   'frequency' : {
-    'timeout' : 10,
+    'timeout' : 250, /* ms */
     'min' : 45,
     'max' : 55
   }, 
   'speed' : {
-    'timeout' : 3000,
+    'timeout' : 3000, /* ms */
     'min' : 45,
     'max' : 55
   },
   'sw' : {
-    'timeout' : 10000,
-    'delay'   : 100,
+    'timeout' : 10000, /* ms */
+    'delay'   : 100,   /* ms */
   }
 }
 const modbus = {

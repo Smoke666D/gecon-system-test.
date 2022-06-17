@@ -63,7 +63,7 @@ function Modbus () {
   this.init = function ( path, speed ) {
     return new Promise( function ( resolve, reject ) {
       serial.checkPath( path ).then( function () {
-        self.client.connectRTU( path, { baudRate: speed }, function () {
+        self.client.connectRTU( path, { baudRate: speed, parity: 'even' }, function () {
           log.write( 'message', ( path + ' has opened as modbus' ) );
           initOven().then( function () {
             log.write( 'message', ( 'Declared ' + ovenNumber + ' Oven device on ModBus' ) );
@@ -85,21 +85,42 @@ function Modbus () {
       reject();
     });
   }
-  this.read = function ( id, adr ) {
+  this.read = function ( id, adr, type="input" ) {
     return new Promise( function ( resolve, reject ) {
       const delay = readTimeout / readIterat;
       var counter = 0;
+      var ready = false;
       self.client.setID( id );
       function loop () {
         setTimeout ( function () {
           counter++;
-          self.client.readInputRegisters( adr, 1 ).then( function ( val ) {
-            resolve( val.data[0] );
-          });
-          if ( counter < readIterat ) {
-           loop(); 
+          if ( type == "input" ) {
+            self.client.readInputRegisters( adr, 1 ).then( function ( val ) {
+              ready = true;
+              resolve( val.data[0] );
+            }).catch( function ( error ) {
+              console.log( error )
+              reject();
+            });
+          } else if ( type == "holding" ) {
+            self.client.readHoldingRegisters( adr, 1 ).then( function ( val ) {
+              ready = true;
+              resolve( val.data[0] );
+            }).catch( function ( error ) {
+              console.log( error )
+              reject();
+            });
           } else {
-            log.write( 'error', 'ModBus read timeout' );
+            log.write( 'error', 'ModBus read wrong register type' ); 
+            reject();
+          }
+          
+          if ( counter < readIterat ) {
+            loop(); 
+          } else {
+            if ( ready == false ) {
+              log.write( 'error', 'ModBus read timeout' );
+            }
             reject();
           }
         }, delay );

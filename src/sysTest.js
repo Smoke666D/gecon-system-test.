@@ -114,14 +114,14 @@ function systemTest ( assert ) {
       return new Promise( function ( resolve, reject ) {
         let result   = 0;
         let request  = makeSerialRequest( gecon.serial.command.set, gecon.serial.target.dout, n );
-        let expected = '1'; 
+        let expected = ( 1 << n ).toString(); 
         let timeout  = gecon.normal.doutTimeout.on;
         assert.write( dinMap[n], request, expected, timeout, ( 'DOUT ' + n ) ).then( function ( res ) {
           result += res;
           list.push( new Record( ( 'DOUT ' + n + ' on' ), res ) );
           request  = makeSerialRequest( gecon.serial.command.reset, gecon.serial.target.dout, n );
           expected = '0';
-          timeout  = gecon.normal.doutTimeout.on;
+          timeout  = gecon.normal.doutTimeout.off;
           assert.write( dinMap[n], request, expected, timeout, ( 'DOUT ' + n ) ).then( function ( res ) {
             list.push( new Record( ( 'DOUT ' + n + ' off' ), res ) );
             resolve( result + res );
@@ -326,14 +326,16 @@ function systemTest ( assert ) {
     }
     function testModbus () {
       return new Promise( function ( resolve, reject ) {
-        let id  = gecon.modbus.id
+        let id  = gecon.modbus.id;
         let adr = gecon.modbus.map.battery;
-        let min = gecon.normal.battery.min;
-        let max = gecon.normal.battery.max;
-        assert.modbus( id, adr, min, max, 'Modbus' ).then( function ( res ) {
+        let min = gecon.normal.battery.min * 10;
+        let max = gecon.normal.battery.max * 10;
+        assert.modbus( id, adr, min, max, 'Modbus', 'holding' ).then( function ( res ) {
           list.push( new Record( 'Modbus', res ) );
           resolve( res );
-        }).catch( function () { reject() });
+        }).catch( function () { 
+          reject() 
+        });
       });
     }
     function testTime () {
@@ -371,17 +373,19 @@ function systemTest ( assert ) {
         });
         if ( testSecces >= testLength ) {
           log.write( 'message', 'System test finished seccesful=)')
+          resolve( true );
         } else {
           log.write( 'warning', ( 'System test finished with errors. There are ' + ( testLength - testSecces ) + ' unseccesful tests' ) );
+          resolve( false );
         }
-        resolve();
+        
       });
     }
     async function run () {
       list = [];
+      let res = false;
       try {
-        /*
-        await testTime();
+        //await testTime();
         await testUSB();
         await testButtonUp( 0 );
         await testButtonUp( 1 );
@@ -403,8 +407,8 @@ function systemTest ( assert ) {
         await testDout( 3 );
         await testDout( 4 );
         await testDout( 5 );
+        
         await testModbus(); // Error on device side 
-        */
         /*
         await testGeneratorVoltage( 0 );
         await testGeneratorVoltage( 1 );
@@ -430,8 +434,8 @@ function systemTest ( assert ) {
         await testLED( 1 );
         await testLED( 2 );
         */
-        await finish();
-        return Promise.resolve( list );
+        res = await finish();
+        return Promise.resolve( [list, res] );
       } catch {
         return Promise.reject();
       }

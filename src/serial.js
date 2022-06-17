@@ -4,8 +4,8 @@ const log        = require( './log.js' );
 const fs         = require( 'fs' );
 const gecon      = require( './gecon.js' );
 
-const readTimeout = 1000; /* ms */
-const readIterat  = 10;
+const readTimeout = 5000; /* ms */
+const readIterat  = 50;
 
 function SerialEnv () {
   var self = this;
@@ -121,6 +121,7 @@ function Serial () {
   var inFinish = true;
 
   function isInputFinish () {
+    //console.log( input )
     if ( input.indexOf( gecon.serial.postfix ) > 0 ) {
       inFinish = true;
     }
@@ -202,8 +203,6 @@ function Serial () {
       } else {
         reject();
       }
-
-      
     });
   }
   return;

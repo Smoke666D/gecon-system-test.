@@ -194,9 +194,9 @@ function Assert ( serial, modbus ) {
       });
     });
   }
-  this.modbus  = function ( id, adr, min, max, name ) {
+  this.modbus = function ( id, adr, min, max, name, type="input" ) {
     return new Promise ( function ( resolve, reject ) {
-      modbus.read( id, adr ).then( function ( data ) {
+      modbus.read( id, adr, type ).then( function ( data ) {
         if ( ( data >= min ) && ( data <= max ) ) {
           log.write( 'message', ( name + ' - Ok' ) );
           resolve( 1 );
