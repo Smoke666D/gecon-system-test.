@@ -366,7 +366,6 @@ function systemTest ( assert ) {
       let res = false;
       try {
         await testSD();
-        /*
         await testTime();
         await testUSB();
         await testButtonUp( 0 );
@@ -389,19 +388,19 @@ function systemTest ( assert ) {
         await testDout( 3 );
         await testDout( 4 );
         await testDout( 5 );
-        await testGeneratorVoltage( 0 );
-        await testGeneratorVoltage( 1 );
-        await testGeneratorVoltage( 2 );
-        await testMainsVoltage( 0 );
-        await testMainsVoltage( 1 );
-        await testMainsVoltage( 2 );
-        await testCurrent( 0 );
-        await testCurrent( 1 );
-        await testCurrent( 2 );
-        await testFrequency( 0 );
-        await testFrequency( 1 );
-        await testSpeed();
-        await testEthernet();
+        //await testGeneratorVoltage( 0 );
+        //await testGeneratorVoltage( 1 );
+        //await testGeneratorVoltage( 2 );
+        //await testMainsVoltage( 0 );
+        //await testMainsVoltage( 1 );
+        //await testMainsVoltage( 2 );
+        //await testCurrent( 0 );
+        //await testCurrent( 1 );
+        //await testCurrent( 2 );
+        //await testFrequency( 0 );
+        //await testFrequency( 1 );
+        //await testSpeed();
+        //await testEthernet();
         await testModbus();
         await testButtonDown( 0 );
         await testButtonDown( 1 );
@@ -411,7 +410,7 @@ function systemTest ( assert ) {
         await testLED( 0 );
         await testLED( 1 );
         await testLED( 2 );
-        */
+        
         res = await finish();
         return Promise.resolve( [list, res] );
       } catch {

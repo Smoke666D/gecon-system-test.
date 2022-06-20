@@ -152,7 +152,7 @@ function StLink () {
           });
 
           flash.on( 'close', function ( code ) {
-            console.log( 'close with code ' + code );
+            //console.log( 'close with code ' + code );
           });
         } else {
           log.write( 'error', 'There is no ' + firmwareFileName + ' file' );
